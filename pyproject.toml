@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dharmadhatu-classificador"
+name = "dharmabot"
 version = "0.1.0"
 description = "Pipeline OSINT y clasificación de eventos psytrance globales (2025-2028) desde fuentes públicas."
 readme = "README.md"

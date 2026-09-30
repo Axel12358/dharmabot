@@ -1,8 +1,8 @@
-# Dharmadhatu Classificador
+# dharmabot
 
 Pipeline de OSINT y clasificación de eventos **psytrance / psychedelic trance** a nivel mundial (2025-2028). Descubre, enriquece y mantiene un dataset global estructurado (organizador, email, fecha, lugar, subgénero) a partir de fuentes públicas — todo local, sin APIs de pago y sin exponer IP real.
 
-> Repositorio limpio de **código y documentación**. Los datasets y caches (CSV, JSON de estado) se generan al ejecutar y **no se versionan**; la copia de trabajo operativa es `/Users/angelgarcia/dharmadhatu_agent_qwen`.
+> Repositorio limpio de **código y documentación**. Los datasets y caches (CSV, JSON de estado) se generan al ejecutar y **no se versionan**; la copia de trabajo operativa es `/Users/angelgarcia/dharmabot`.
 
 ## Estado actual (dataset global)
 
