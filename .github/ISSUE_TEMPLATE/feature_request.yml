@@ -1,0 +1,38 @@
+name: Feature request
+description: Proponer una mejora o nueva capacidad de la plataforma.
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: "## Propuesta"
+  - type: textarea
+    id: problema
+    attributes:
+      label: "Problema u oportunidad"
+      description: "Qué necesidad cubre o qué mejora aporta."
+    validations:
+      required: true
+  - type: textarea
+    id: solucion
+    attributes:
+      label: "Solución propuesta"
+      description: "Comportamiento, módulos afectados y criterios de aceptación."
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: "Alternativas consideradas"
+    validations:
+      required: false
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: "Prioridad sugerida"
+      options:
+        - "Alta"
+        - "Media"
+        - "Baja"
+    validations:
+      required: true

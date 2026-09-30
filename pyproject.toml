@@ -5,15 +5,32 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dharmabot"
 version = "0.1.0"
-description = "Pipeline OSINT y clasificación de eventos psytrance globales (2025-2028) desde fuentes públicas."
+description = "Plataforma de inteligencia y descubrimiento de eventos psytrance a escala global (2025-2028): monitoreo continuo, clasificación por subgénero y enriquecimiento automatizado."
 readme = "README.md"
 requires-python = ">=3.10"
-keywords = ["osint", "psytrance", "events", "web-scraping", "clasificacion"]
+keywords = [
+    "psytrance", "osint", "event-discovery",
+    "web-scraping", "events", "classification",
+    "music-events", "data-pipeline",
+]
+authors = [{ name = "Axel12358" }]
+license = { text = "Proprietary — uso privado. Ver LICENSE." }
 classifiers = [
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Intended Audience :: Developers",
     "Topic :: Internet :: WWW/HTTP",
+    "Operating System :: MacOS",
+    "Natural Language :: Spanish",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Axel12358/dharmabot"
+Repository = "https://github.com/Axel12358/dharmabot"
+Issues = "https://github.com/Axel12358/dharmabot/issues"
 
 [project.dependencies]
 requests[socks]>=2.28.0

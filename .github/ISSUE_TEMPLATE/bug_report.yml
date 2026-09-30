@@ -1,0 +1,50 @@
+name: Bug report
+description: Reportar un fallo o comportamiento incorrecto de la plataforma.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "## Describe el fallo"
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: "Descripción"
+      description: "Qué ocurre y qué esperabas que ocurriera."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduccion
+    attributes:
+      label: "Pasos para reproducir"
+      placeholder: |
+        1. Ejecutar ...
+        2. ...
+      render: bash
+    validations:
+      required: true
+  - type: input
+    id: modulo
+    attributes:
+      label: "Módulo / script afectado"
+      description: "Ej. core/csv_lock.py, recuperar_fechas.py"
+    validations:
+      required: true
+  - type: dropdown
+    id: impacto
+    attributes:
+      label: "Impacto"
+      options:
+        - "Bloqueante (detiene la operación)"
+        - "Alto (pérdida de datos)"
+        - "Medio (comportamiento incorrecto)"
+        - "Bajo (cosmético)"
+    validations:
+      required: true
+  - type: textarea
+    id: entorno
+    attributes:
+      label: "Entorno"
+      placeholder: "Python 3.x · macOS · Tor activo/sin Tor"
+    validations:
+      required: false

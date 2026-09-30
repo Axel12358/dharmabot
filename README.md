@@ -2,8 +2,13 @@
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Estado](https://img.shields.io/badge/estado-operativo-green)
+![Mantenido](https://img.shields.io/badge/mantenimiento-activo-brightgreen)
 ![Visibilidad](https://img.shields.io/badge/visibilidad-privada-lightgrey)
 ![Datos](https://img.shields.io/badge/datos-no%20versionados-orange)
+![Cobertura org](https://img.shields.io/badge/organizadores-92%25-brightgreen)
+![Cobertura email](https://img.shields.io/badge/email-88%25-brightgreen)
+![Cobertura fecha](https://img.shields.io/badge/fechas-94%25-brightgreen)
+![Licencia](https://img.shields.io/badge/licencia-propietaria-inactive)
 
 **Plataforma de inteligencia y descubrimiento de eventos psytrance a escala global (2025-2028).** dharmabot opera en producción un canal 24/7 de monitoreo de fuentes públicas, extracción, clasificación y enriquecimiento de eventos de música psicodélica en todo el mundo — un dataset profesional estructurado (organizador, email, fecha, lugar, subgénero) construido y mantenido de forma continua, 100% local y sin APIs de pago.
 
@@ -118,7 +123,9 @@ tail -f $HOME/dharmabot/loop_completar.log
 
 ## Contribuir
 
-Ver [`CONTRIBUTING.md`](CONTRIBUTING.md) y [`ARCHITECTURE.md`](ARCHITECTURE.md).
+Ver [`CONTRIBUTING.md`](CONTRIBUTING.md), [`ARCHITECTURE.md`](ARCHITECTURE.md),
+[`CHANGELOG.md`](CHANGELOG.md) y [`SECURITY.md`](SECURITY.md).
+Usa las plantillas de [issues](.github/ISSUE_TEMPLATE) y [PR](.github/PULL_REQUEST_TEMPLATE.md).
 
 ## Licencia
 
