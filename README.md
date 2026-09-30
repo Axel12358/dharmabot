@@ -1,5 +1,10 @@
 # dharmabot
 
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Estado](https://img.shields.io/badge/estado-operativo-green)
+![Visibilidad](https://img.shields.io/badge/visibilidad-privada-lightgrey)
+![Datos](https://img.shields.io/badge/datos-no%20versionados-orange)
+
 Pipeline de OSINT y clasificación de eventos **psytrance / psychedelic trance** a nivel mundial (2025-2028). Descubre, enriquece y mantiene un dataset global estructurado (organizador, email, fecha, lugar, subgénero) a partir de fuentes públicas — todo local, sin APIs de pago y sin exponer IP real.
 
 > Repositorio limpio de **código y documentación**. Los datasets y caches (CSV, JSON de estado) se generan al ejecutar y **no se versionan**; la copia de trabajo operativa es `/Users/angelgarcia/dharmabot`.
@@ -99,4 +104,4 @@ Ver [`CONTRIBUTING.md`](CONTRIBUTING.md) y [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Licencia
 
-Uso privado — distribución restringida. Sin licencia pública.
+Uso privado — distribución restringida. Ver [`LICENSE`](LICENSE).
