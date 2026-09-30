@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+
+# Entornos
+.venv/
+venv/
+
+# Datasets (se generan/operan en la carpeta de trabajo, no en el repo)
+data/
+*.csv
+!config/ciudades_120.json
+
+# Estado/caches de ejecución (no versionables)
+*.json
+!config_modulos.json
+
+# Logs y salida de procesos
+*.log
+*.err
+*.out
+
+# Tor / proxies en runtime
+tor_data/
+proxies_local
+proxies.txt
+
+# Modelos entrenados (binarios)
+models/
+*.pkl
+
+# Backups
+backups/
+backups_enrich/
+*.backup
+*.bak*
+
+# Node/opencode local
+node_modules/
+
+# Sistemas
+.DS_Store
