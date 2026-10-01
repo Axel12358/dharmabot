@@ -6,7 +6,7 @@
 ![Visibilidad](https://img.shields.io/badge/visibilidad-privada-lightgrey)
 ![Datos](https://img.shields.io/badge/datos-no%20versionados-orange)
 ![Cobertura org](https://img.shields.io/badge/organizadores-92%25-brightgreen)
-![Cobertura email](https://img.shields.io/badge/email-88%25-brightgreen)
+![Cobertura email](https://img.shields.io/badge/email-90%25-brightgreen)
 ![Cobertura fecha](https://img.shields.io/badge/fechas-94%25-brightgreen)
 ![Licencia](https://img.shields.io/badge/licencia-propietaria-inactive)
 
@@ -29,8 +29,8 @@
 |---|---|
 | Eventos 2025-2028 en producción | **14.491** |
 | Organizador resuelto | **92%** |
-| Email de contacto válido | **88%** |
-| Fecha específica resuelta | **94.5%** |
+| Email de contacto válido | **90%** |
+| Fecha específica resuelta | **94%** |
 
 - Fechas pendientes (`YYYY-01-01`) → eventos Facebook tras muro de login; se mantienen como `fecha_pendiente`, sin inventar datos.
 - Fuera de rango → archivos `eventos_deadstock_2021_2024.csv` / `eventos_historicos_pre2021.csv`.
@@ -83,6 +83,7 @@ brew install tor && brew services start tor
 # Pases puntuales
 python recuperar_fechas.py       # fechas desde FB og:description
 python empujar_org_email.py      # org/email offline desde caches
+python generar_reporte.py        # reporte_datos.md (estado del dataset)
 ```
 
 ## Organización del repo
