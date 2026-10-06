@@ -3,17 +3,16 @@
 VENV := .venv
 PY := $(VENV)/bin/python
 
-install:               ## Instala dependencias en un venv
-	python3 -m venv $(VENV)
-	$(PY) -m pip install --upgrade pip
-	$(PY) -m pip install -r requirements.txt
-	$(PY) -m pip install ruff
+install:               ## Crea venv e instala deps + dev con uv
+	uv venv $(VENV)
+	$(PY) -m pip install -e '.[dev]'
 
 lint:                  ## Lint + formato (ruff)
 	$(PY) -m ruff check core/ --fix || true
+	$(PY) -m ruff format core/ tests/ || true
 
-test:                  ## Tests rápidos (si existen)
-	$(PY) test_eventos.py || echo "No tests definidos"
+test:                  ## Tests puros sin red
+	$(PY) -m pytest -q --no-header -W ignore tests/test_fecha_parse.py
 
 run:                   ## Loop principal de enriquecimiento
 	./run_loop_completar.sh

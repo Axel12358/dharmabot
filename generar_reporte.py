@@ -13,7 +13,8 @@ EM = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 def leer(csv_path):
     if not csv_path.exists():
         return []
-    return list(csv.DictReader(open(csv_path, encoding='utf-8')))
+    with open(csv_path, encoding='utf-8') as fh:
+        return list(csv.DictReader(fh))
 
 
 def pct(n, m):
