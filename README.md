@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Estado](https://img.shields.io/badge/estado-operativo-green)
 ![Mantenido](https://img.shields.io/badge/mantenimiento-activo-brightgreen)
-![Visibilidad](https://img.shields.io/badge/visibilidad-privada-lightgrey)
+![Visibilidad](https://img.shields.io/badge/visibilidad-p%C3%BAblica-brightgreen)
 ![Datos](https://img.shields.io/badge/datos-no%20versionados-orange)
 ![Cobertura org](https://img.shields.io/badge/organizadores-92%25-brightgreen)
 ![Cobertura email](https://img.shields.io/badge/email-90%25-brightgreen)
