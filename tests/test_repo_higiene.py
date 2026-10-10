@@ -10,7 +10,7 @@
 import ast
 from pathlib import Path
 
-import tomllib
+import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 CARACTERES_PROHIBIDOS = (
@@ -38,6 +38,7 @@ def test_py_sin_caracteres_de_control():
 
 
 def test_pyproject_toml_valido():
+    tomllib = pytest.importorskip("tomllib")  # stdlib solo en 3.11+; en 3.10 se omite
     pyproject = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
     proj = pyproject["project"]
     assert proj["name"] == "dharmabot"
