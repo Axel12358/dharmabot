@@ -19,7 +19,6 @@ from __future__ import annotations
 import json
 import os
 import random
-import time
 from pathlib import Path
 from typing import Optional
 
@@ -73,9 +72,10 @@ def get_active_proxies() -> dict:
     url = _load_proxy_url()
     if url:
         if url.startswith("socks5://"):
-            url = "socks5h://" + url[len("socks5://"):]
+            url = "socks5h://" + url[len("socks5://") :]
         return {"http": url, "https": url}
     return TOR_PROXIES
+
 
 # Perfil de TLS a impersonar. Se elige chrome110 (funciona bien contra FB).
 # Si fb lo rechaza, se puede cambiar a "safari15_3" o "safari16_0".

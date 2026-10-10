@@ -20,7 +20,10 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import requests
 
 _PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PROJECT_ROOT not in sys.path:
@@ -85,6 +88,7 @@ def rotar_tor() -> bool:
         try:
             from stem import Signal
             from stem.control import Controller
+
             with Controller.from_port(port=TOR_CONTROL_PORT) as controller:
                 try:
                     controller.authenticate(password=TOR_CONTROL_PASSWORD)
@@ -114,7 +118,7 @@ def rotar_tor() -> bool:
                 f"RunAsDaemon 0\n"
             )
 
-        proc = subprocess.Popen(
+        subprocess.Popen(
             [TOR_BIN, "-f", str(TORRC_PATH)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -139,7 +143,9 @@ def obtener_sesion_tor() -> "requests.Session":
     """
     import requests
 
-    from core.http_client import get_active_proxies as _gap, _load_proxy_url as _lp
+    from core.http_client import _load_proxy_url as _lp
+    from core.http_client import get_active_proxies as _gap
+
     if _lp():
         s = requests.Session()
         s.proxies.update(_gap())
@@ -147,17 +153,20 @@ def obtener_sesion_tor() -> "requests.Session":
         return s
 
     if not verificar_tor():
-        raise RuntimeError("Tor no disponible en 127.0.0.1:9050. "
-                           "Inicia Tor antes de hacer peticiones.")
+        raise RuntimeError(
+            "Tor no disponible en 127.0.0.1:9050. Inicia Tor antes de hacer peticiones."
+        )
 
     session = requests.Session()
     proxy_url = f"socks5h://{TOR_SOCKS_HOST}:{TOR_SOCKS_PORT}"
     session.proxies.update({"http": proxy_url, "https": proxy_url})
-    session.headers.update({
-        "User-Agent": random.choice(_user_agents),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-    })
+    session.headers.update(
+        {
+            "User-Agent": random.choice(_user_agents),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+    )
     return session
 
 
@@ -169,11 +178,13 @@ def obtener_sesion_tor_flexible(usar_tor: bool = True) -> "requests.Session":
     import requests
 
     session = requests.Session()
-    session.headers.update({
-        "User-Agent": random.choice(_user_agents),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-    })
+    session.headers.update(
+        {
+            "User-Agent": random.choice(_user_agents),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+    )
     if usar_tor:
         if not verificar_tor():
             raise RuntimeError("Tor no disponible. No se permite scraping con IP real.")

@@ -23,14 +23,14 @@ Uso:
 
 Requiere: opencode CLI en PATH (ya instalado). No requiere API keys.
 """
+
 import json
 import logging
-import os
 import re
 import subprocess
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -97,9 +97,13 @@ def _llamar_opencode(modelo: str, prompt: str, system: str = "") -> Optional[str
     full_prompt = f"{system}\n\n{prompt}" if system else prompt
     # Escapar para shell — usamos lista, no shell
     cmd = [
-        "opencode", "run", full_prompt,
-        "-m", modelo,
-        "--format", "json",
+        "opencode",
+        "run",
+        full_prompt,
+        "-m",
+        modelo,
+        "--format",
+        "json",
     ]
     try:
         result = subprocess.run(
@@ -168,6 +172,7 @@ class HybridLLMClient:
 # Singleton
 _hybrid_instance = None
 
+
 def get_hybrid_client() -> HybridLLMClient:
     global _hybrid_instance
     if _hybrid_instance is None:
@@ -182,6 +187,7 @@ def _fallback_regex_clasificar(nombre: str) -> str:
     """Fallback sin LLM: usa event_extractor si existe, sino heurística simple."""
     try:
         from scrapers.event_extractor import EventExtractor
+
         sg = EventExtractor.clasificar_subgenero(nombre)
         if sg and sg not in ("", "general", "no_psy"):
             return sg
@@ -215,32 +221,48 @@ def reclasificar_no_psy_hibrido(events: List[Dict], batch_size: int = 3) -> List
         return events
 
     client = get_hybrid_client()
-    SG_VALIDOS = {"psytrance", "darkpsy", "forest", "hitech", "progressive",
-                  "fullon", "goa", "psychill", "psybient", "suomisaundi",
-                  "twilight", "psychedelic"}
+    SG_VALIDOS = {
+        "psytrance",
+        "darkpsy",
+        "forest",
+        "hitech",
+        "progressive",
+        "fullon",
+        "goa",
+        "psychill",
+        "psybient",
+        "suomisaundi",
+        "twilight",
+        "psychedelic",
+    }
 
     reclasificados = 0
     por_llm = 0
     por_regex = 0
 
     for i in range(0, len(no_psy), batch_size):
-        batch = no_psy[i:i + batch_size]
-        lineas = [f"{j}: {e.get('nombre','')[:80]} @ {e.get('lugar','')[:40]}" for j, e in enumerate(batch)]
+        batch = no_psy[i : i + batch_size]
+        lineas = [
+            f"{j}: {e.get('nombre', '')[:80]} @ {e.get('lugar', '')[:40]}"
+            for j, e in enumerate(batch)
+        ]
         batch_prompt = (
             f"Eventos musicales. Clasifica cada uno:\n"
             f"{chr(10).join(lineas)}\n"
             f"Subgeneros: psytrance,darkpsy,forest,hitech,progressive,"
             f"fullon,goa,psychill,psybient,suomisaundi,twilight,psychedelic,NO_PSY\n"
-            f"Responde SOLO JSON array: [\"sg0\",\"sg1\",...]"
+            f'Responde SOLO JSON array: ["sg0","sg1",...]'
         )
-        resp = client.generate(batch_prompt, system="Clasificador. Solo JSON array de strings.", temperature=0.05)
+        resp = client.generate(
+            batch_prompt, system="Clasificador. Solo JSON array de strings.", temperature=0.05
+        )
 
         if resp:
             try:
                 clean = resp.strip()
                 if "```" in clean:
                     clean = clean.replace("```json", "").replace("```", "").strip()
-                m = re.search(r'\[.*\]', clean, re.DOTALL)
+                m = re.search(r"\[.*\]", clean, re.DOTALL)
                 if m:
                     clean = m.group(0)
                 clasifs = json.loads(clean)
@@ -264,5 +286,7 @@ def reclasificar_no_psy_hibrido(events: List[Dict], batch_size: int = 3) -> List
                 reclasificados += 1
                 por_regex += 1
 
-    print(f"  📊 Reclasificados: {reclasificados}/{len(no_psy)} (LLM: {por_llm}, regex: {por_regex})")
+    print(
+        f"  📊 Reclasificados: {reclasificados}/{len(no_psy)} (LLM: {por_llm}, regex: {por_regex})"
+    )
     return events

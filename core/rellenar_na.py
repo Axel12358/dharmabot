@@ -11,9 +11,8 @@ Llena con datos derivables dentro del propio dataset + geo_cache:
 Uso (bajo lock, reutilizable desde el loop o CLI):
     python3 core/rellenar_na.py
 """
-import csv
+
 import json
-import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -24,21 +23,42 @@ GEO_CACHE = ROOT / "geo_cache.json"
 
 # Semilla curada (ciudades/venues de escena sin país en el dataset)
 CIUDAD_PAIS_SEED = {
-    "Moscow": "Russia", "The Hague": "Netherlands", "Bremen": "Germany",
-    "Badalona": "Spain", "Albuquerque": "United States", "Zandvoort": "Netherlands",
-    "Richardson": "United States", "Americus": "United States", "Brno": "Czech Republic",
-    "Mons": "Belgium", "Ostrowiec Swietokrzyski": "Poland", "Topeka": "United States",
-    "Arlee": "United States", "Everson": "United States", "Karlsruhe": "Germany",
-    "Saarbrücken": "Germany", "Tramm": "Germany", "Maryville": "United States",
-    "Hatfield": "United Kingdom", "Kallnach": "Switzerland", "Crozet": "France",
-    "Harrisburg": "United States", "Costa Da Caparica": "Portugal", "Desterro": "Brazil",
+    "Moscow": "Russia",
+    "The Hague": "Netherlands",
+    "Bremen": "Germany",
+    "Badalona": "Spain",
+    "Albuquerque": "United States",
+    "Zandvoort": "Netherlands",
+    "Richardson": "United States",
+    "Americus": "United States",
+    "Brno": "Czech Republic",
+    "Mons": "Belgium",
+    "Ostrowiec Swietokrzyski": "Poland",
+    "Topeka": "United States",
+    "Arlee": "United States",
+    "Everson": "United States",
+    "Karlsruhe": "Germany",
+    "Saarbrücken": "Germany",
+    "Tramm": "Germany",
+    "Maryville": "United States",
+    "Hatfield": "United Kingdom",
+    "Kallnach": "Switzerland",
+    "Crozet": "France",
+    "Harrisburg": "United States",
+    "Costa Da Caparica": "Portugal",
+    "Desterro": "Brazil",
     "Paulo": "Brazil",
     # clúster Lisboa (venues de la escena lisboeta)
-    "Lisboa Ao Vivo": "Portugal", "LX Factory": "Portugal",
-    "Collect LX Factory": "Portugal", "Cosmos Campolide": "Portugal",
-    "Lux Fragil": "Portugal", "Kømplex Lisbon": "Portugal",
-    "Anfiteatro de Pedra": "Portugal", "Escala25": "Portugal",
-    "Papoila Bar": "Portugal", "Quinta Mira Rio": "Portugal",
+    "Lisboa Ao Vivo": "Portugal",
+    "LX Factory": "Portugal",
+    "Collect LX Factory": "Portugal",
+    "Cosmos Campolide": "Portugal",
+    "Lux Fragil": "Portugal",
+    "Kømplex Lisbon": "Portugal",
+    "Anfiteatro de Pedra": "Portugal",
+    "Escala25": "Portugal",
+    "Papoila Bar": "Portugal",
+    "Quinta Mira Rio": "Portugal",
     "o Bom, o Mau e o Vilão": "Portugal",
 }
 
@@ -56,10 +76,22 @@ PAIS_GEO_SEED = {
 
 
 def _clave(r):
-    return r.get("link", "") or f"{r.get('nombre','')}|{r.get('fecha','')}"
+    return r.get("link", "") or f"{r.get('nombre', '')}|{r.get('fecha', '')}"
+
 
 SUBGENRE_KEYWORDS = {
-    "dark psy": ["dark psy", "darkpsy", "dark", "ritual", "nocturnal", "shadow", "void", "abyss", "cloak", "black"],
+    "dark psy": [
+        "dark psy",
+        "darkpsy",
+        "dark",
+        "ritual",
+        "nocturnal",
+        "shadow",
+        "void",
+        "abyss",
+        "cloak",
+        "black",
+    ],
     "forest": ["forest", "jungle", "woods", "nature", "organic", "roots", "tribal", "trees"],
     "twilight": ["twilight", "dusk", "sunset"],
     "goa trance": ["goa", "cosmic", "celestial", "spiritual", "mantra", "om "],
@@ -68,12 +100,21 @@ SUBGENRE_KEYWORDS = {
     "psycore": ["psycore", "core", "terror", "hardcore", "hitechcore", "darkcore"],
     "progressive": ["progressive", "prog trance", "zenon", "flow", "hypnotic", "mental", "melodic"],
     "psybient": ["psybient", "ambient", "psydub", "chill", "dub", "downtempo", "psychill", "suomi"],
-    "psy trance": ["psy", "trance", "party", "gathering", "celebration", "festival", "rave", "ceremony"],
+    "psy trance": [
+        "psy",
+        "trance",
+        "party",
+        "gathering",
+        "celebration",
+        "festival",
+        "rave",
+        "ceremony",
+    ],
 }
 
 
 def _clave(r):
-    return r.get("link", "") or f"{r.get('nombre','')}|{r.get('fecha','')}"
+    return r.get("link", "") or f"{r.get('nombre', '')}|{r.get('fecha', '')}"
 
 
 def _classificar_subgenero(nombre):
@@ -106,9 +147,10 @@ def _aprender_geo(rows):
                 geo[1][sub] += 1
     aprendido = {k: v.most_common(1)[0][0] for k, v in aprendido.items()}
     lugar_pais = {**CIUDAD_PAIS_SEED, **aprendido}
-    pais_geo = {k: (v[0].most_common(1)[0][0] if v[0] else "",
-                    v[1].most_common(1)[0][0] if v[1] else "")
-                for k, v in pais_geo.items()}
+    pais_geo = {
+        k: (v[0].most_common(1)[0][0] if v[0] else "", v[1].most_common(1)[0][0] if v[1] else "")
+        for k, v in pais_geo.items()
+    }
     # geo_cache: city -> [pais, continente, subcontinente]
     try:
         gc = json.load(open(GEO_CACHE, encoding="utf-8"))
@@ -162,6 +204,7 @@ def rellenar_na_locales(rows):
 def main():
     sys.path.insert(0, str(ROOT))
     from core.csv_lock import csv_locked_rows
+
     with csv_locked_rows(CSV_FILE) as (rows, _fn):
         cambios = rellenar_na_locales(rows)
         n = 0
@@ -171,7 +214,9 @@ def main():
                 for campo, valor in upd.items():
                     r[campo] = valor
                 n += 1
-        print(f"✅ rellenar_na: {n} filas actualizadas ({sum(len(v) for v in cambios.values())} campos)")
+        print(
+            f"✅ rellenar_na: {n} filas actualizadas ({sum(len(v) for v in cambios.values())} campos)"
+        )
 
 
 if __name__ == "__main__":

@@ -10,19 +10,20 @@ Uso:
     from core.serp_tor import buscar_serp
     resultados = buscar_serp("psytrance festival 2026 site:facebook.com")
 """
+
 from __future__ import annotations
 
 import base64
 import random
 import re
-import time
-from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import quote_plus, unquote
+from typing import Dict, List, Optional
+from urllib.parse import unquote
 
 import requests
 
 try:
     from core.serp_cache import cache_get, cache_set
+
     _HAY_CACHE = True
 except Exception:
     _HAY_CACHE = False
@@ -30,12 +31,15 @@ except Exception:
 # --- Tor pool ---
 try:
     from core.tor_pool import (
-        IDENTIDADES_TOR,
         obtener_sesion_tor as _pool_sesion,
-        verificar_tor as _pool_verificar,
-        rotar_tor as _pool_rotar,
+    )
+    from core.tor_pool import (
         obtener_siguiente_identidad as _pool_siguiente,
     )
+    from core.tor_pool import (
+        rotar_tor as _pool_rotar,
+    )
+
     _TOR_POOL = True
 except ImportError:
     _TOR_POOL = False
@@ -90,12 +94,8 @@ def _parse_ddg(html: str) -> List[Dict]:
     """Parsea resultados de DuckDuckGo Lite."""
     resultados = []
     # URLs en duckduckgo.com/l/?uddg=
-    links = re.findall(
-        r'class="result__a"[^>]*href="([^"]*)"', html
-    )
-    snippets = re.findall(
-        r'class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL
-    )
+    links = re.findall(r'class="result__a"[^>]*href="([^"]*)"', html)
+    snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
     for i, href in enumerate(links):
         m = re.search(r"uddg=([^&]+)", href)
         url = unquote(m.group(1)) if m else href
@@ -113,13 +113,9 @@ def _parse_bing(html: str) -> List[Dict]:
     resultados = []
     # Bing usa li.b_algo > h2 > a
     links = re.findall(
-        r'<li class="b_algo"[^>]*>.*?<h2><a href="([^"]*)"[^>]*>(.*?)</a>',
-        html, re.DOTALL
+        r'<li class="b_algo"[^>]*>.*?<h2><a href="([^"]*)"[^>]*>(.*?)</a>', html, re.DOTALL
     )
-    snippets = re.findall(
-        r'<li class="b_algo"[^>]*>.*?<p[^>]*>(.*?)</p>',
-        html, re.DOTALL
-    )
+    snippets = re.findall(r'<li class="b_algo"[^>]*>.*?<p[^>]*>(.*?)</p>', html, re.DOTALL)
     for i, (url, titulo) in enumerate(links):
         if not url.startswith("http"):
             continue
@@ -127,10 +123,14 @@ def _parse_bing(html: str) -> List[Dict]:
         snippet = ""
         if i < len(snippets):
             snippet = re.sub(r"<[^>]+>", "", snippets[i]).strip()[:300]
-        resultados.append({
-            "url": url, "titulo": titulo,
-            "snippet": snippet, "motor": "bing",
-        })
+        resultados.append(
+            {
+                "url": url,
+                "titulo": titulo,
+                "snippet": snippet,
+                "motor": "bing",
+            }
+        )
     return resultados
 
 
@@ -139,13 +139,9 @@ def _parse_startpage(html: str) -> List[Dict]:
     resultados = []
     # Startpage usa .w-gl__result > a
     links = re.findall(
-        r'<a[^>]*class="w-gl__result-title[^"]*"[^>]*href="([^"]*)"[^>]*>(.*?)</a>',
-        html, re.DOTALL
+        r'<a[^>]*class="w-gl__result-title[^"]*"[^>]*href="([^"]*)"[^>]*>(.*?)</a>', html, re.DOTALL
     )
-    snippets = re.findall(
-        r'<p class="w-gl__description[^"]*"[^>]*>(.*?)</p>',
-        html, re.DOTALL
-    )
+    snippets = re.findall(r'<p class="w-gl__description[^"]*"[^>]*>(.*?)</p>', html, re.DOTALL)
     for i, (url, titulo) in enumerate(links):
         if not url.startswith("http"):
             continue
@@ -153,10 +149,14 @@ def _parse_startpage(html: str) -> List[Dict]:
         snippet = ""
         if i < len(snippets):
             snippet = re.sub(r"<[^>]+>", "", snippets[i]).strip()[:300]
-        resultados.append({
-            "url": url, "titulo": titulo,
-            "snippet": snippet, "motor": "startpage",
-        })
+        resultados.append(
+            {
+                "url": url,
+                "titulo": titulo,
+                "snippet": snippet,
+                "motor": "startpage",
+            }
+        )
     return resultados
 
 
@@ -164,10 +164,7 @@ def _parse_google(html: str) -> List[Dict]:
     """Parsea resultados de Google."""
     resultados = []
     # Google usa div.g > div > a
-    bloques = re.findall(
-        r'<div class="g"[^>]*>(.*?)</div>\s*</div>\s*</div>',
-        html, re.DOTALL
-    )
+    bloques = re.findall(r'<div class="g"[^>]*>(.*?)</div>\s*</div>\s*</div>', html, re.DOTALL)
     for bloque in bloques[:_MAX_RESULTADOS]:
         m_url = re.search(r'<a href="/url\?q=([^&"]+)', bloque)
         if not m_url:
@@ -175,16 +172,18 @@ def _parse_google(html: str) -> List[Dict]:
         url = unquote(m_url.group(1))
         if not url.startswith("http"):
             continue
-        m_titulo = re.search(r'<h3[^>]*>(.*?)</h3>', bloque, re.DOTALL)
+        m_titulo = re.search(r"<h3[^>]*>(.*?)</h3>", bloque, re.DOTALL)
         titulo = re.sub(r"<[^>]+>", "", m_titulo.group(1)).strip() if m_titulo else ""
-        m_snippet = re.search(
-            r'<span class="st"[^>]*>(.*?)</span>', bloque, re.DOTALL
-        )
+        m_snippet = re.search(r'<span class="st"[^>]*>(.*?)</span>', bloque, re.DOTALL)
         snippet = re.sub(r"<[^>]+>", "", m_snippet.group(1)).strip()[:300] if m_snippet else ""
-        resultados.append({
-            "url": url, "titulo": titulo,
-            "snippet": snippet, "motor": "google",
-        })
+        resultados.append(
+            {
+                "url": url,
+                "titulo": titulo,
+                "snippet": snippet,
+                "motor": "google",
+            }
+        )
     return resultados
 
 
@@ -197,9 +196,14 @@ def _parse_generic(html: str, motor: str) -> List[Dict]:
         if url in vistos:
             continue
         vistos.add(url)
-        resultados.append({
-            "url": url, "titulo": "", "snippet": "", "motor": motor,
-        })
+        resultados.append(
+            {
+                "url": url,
+                "titulo": "",
+                "snippet": "",
+                "motor": motor,
+            }
+        )
         if len(resultados) >= _MAX_RESULTADOS:
             break
     return resultados
@@ -208,8 +212,9 @@ def _parse_generic(html: str, motor: str) -> List[Dict]:
 # ---------------------------------------------------------------------------
 # Motores de búsqueda
 # ---------------------------------------------------------------------------
-def _buscar_ddg(query: str, sesion: requests.Session,
-                timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
+def _buscar_ddg(
+    query: str, sesion: requests.Session, timeout: int = _TIMEOUT_DEFAULT
+) -> List[Dict]:
     """DuckDuckGo Lite HTML."""
     url = "https://html.duckduckgo.com/html/"
     try:
@@ -221,8 +226,9 @@ def _buscar_ddg(query: str, sesion: requests.Session,
     return []
 
 
-def _buscar_bing(query: str, sesion: requests.Session,
-                 timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
+def _buscar_bing(
+    query: str, sesion: requests.Session, timeout: int = _TIMEOUT_DEFAULT
+) -> List[Dict]:
     """Bing."""
     url = "https://www.bing.com/search"
     try:
@@ -243,7 +249,7 @@ def _parse_bing_directo(html: str) -> List[Dict]:
     resultados = []
     patron = (
         r'<h2[^>]*>\s*<a[^>]+href="(https://www\.bing\.com/ck/a\?[^"]+)"'
-        r'[^>]*>(.*?)</a>'
+        r"[^>]*>(.*?)</a>"
     )
     for m in re.finditer(patron, html, re.DOTALL):
         href, titulo = m.group(1), re.sub(r"<[^>]+>", "", m.group(2)).strip()
@@ -259,15 +265,18 @@ def _parse_bing_directo(html: str) -> List[Dict]:
                 url = ""
         if not url.startswith("http"):
             continue
-        resultados.append({
-            "url": url, "titulo": titulo,
-            "snippet": "", "motor": "bing_directo",
-        })
+        resultados.append(
+            {
+                "url": url,
+                "titulo": titulo,
+                "snippet": "",
+                "motor": "bing_directo",
+            }
+        )
     return resultados[:_MAX_RESULTADOS]
 
 
-def _buscar_bing_directo(query: str, sesion=None,
-                         timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
+def _buscar_bing_directo(query: str, sesion=None, timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
     """Bing vía curl_cffi (sin Tor), impersonando Chrome."""
     try:
         from curl_cffi import requests as _cffi
@@ -282,8 +291,7 @@ def _buscar_bing_directo(query: str, sesion=None,
         )
         if r.status_code == 200:
             low = r.text.lower()
-            if any(x in low for x in ["unusual traffic", "captcha",
-                                       "verify you are human"]):
+            if any(x in low for x in ["unusual traffic", "captcha", "verify you are human"]):
                 return []
             return _parse_bing_directo(r.text)
     except Exception:
@@ -291,8 +299,9 @@ def _buscar_bing_directo(query: str, sesion=None,
     return []
 
 
-def _buscar_bing_directo_pag(query: str, sesion=None,
-                             timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
+def _buscar_bing_directo_pag(
+    query: str, sesion=None, timeout: int = _TIMEOUT_DEFAULT
+) -> List[Dict]:
     """Bing directo con paginación (first=1,11) para más cobertura."""
     try:
         from curl_cffi import requests as _cffi
@@ -319,8 +328,7 @@ def _buscar_bing_directo_pag(query: str, sesion=None,
     return out[:_MAX_RESULTADOS]
 
 
-def _buscar_searxng_local(query: str, sesion=None,
-                          timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
+def _buscar_searxng_local(query: str, sesion=None, timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
     """SearxNG local (self-hosted Docker :8888) — rotación de engines, sin Tor.
 
     Prueba google → mojeek → bing → brave → ddg y devuelve el primero que
@@ -347,12 +355,14 @@ def _buscar_searxng_local(query: str, sesion=None,
                     if not url or url in vistos:
                         continue
                     vistos.add(url)
-                    resultados.append({
-                        "url": url,
-                        "titulo": item.get("title", ""),
-                        "snippet": item.get("content", "")[:300],
-                        "motor": "searxng_{}".format(eng),
-                    })
+                    resultados.append(
+                        {
+                            "url": url,
+                            "titulo": item.get("title", ""),
+                            "snippet": item.get("content", "")[:300],
+                            "motor": "searxng_{}".format(eng),
+                        }
+                    )
                 if resultados:
                     return resultados[:_MAX_RESULTADOS]
             except Exception:
@@ -360,8 +370,9 @@ def _buscar_searxng_local(query: str, sesion=None,
     return []
 
 
-def _buscar_startpage(query: str, sesion: requests.Session,
-                      timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
+def _buscar_startpage(
+    query: str, sesion: requests.Session, timeout: int = _TIMEOUT_DEFAULT
+) -> List[Dict]:
     """Startpage."""
     url = "https://www.startpage.com/do/search"
     try:
@@ -373,21 +384,23 @@ def _buscar_startpage(query: str, sesion: requests.Session,
     return []
 
 
-def _buscar_google(query: str, sesion: requests.Session,
-                   timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
+def _buscar_google(
+    query: str, sesion: requests.Session, timeout: int = _TIMEOUT_DEFAULT
+) -> List[Dict]:
     """Google (con cookies de consentimiento)."""
     url = "https://www.google.com/search"
     cookies = {"CONSENT": "YES+cb.20220301-11-p0.en+FX+700"}
     try:
         r = sesion.get(
-            url, params={"q": query, "hl": "en", "num": 20},
-            cookies=cookies, timeout=timeout,
+            url,
+            params={"q": query, "hl": "en", "num": 20},
+            cookies=cookies,
+            timeout=timeout,
         )
         if r.status_code == 200:
             # Verificar CAPTCHA
             low = r.text.lower()
-            if any(x in low for x in ["unusual traffic", "captcha",
-                                       "consent.google.com"]):
+            if any(x in low for x in ["unusual traffic", "captcha", "consent.google.com"]):
                 return []  # Bloqueado
             return _parse_google(r.text)
         if r.status_code == 429:
@@ -397,8 +410,9 @@ def _buscar_google(query: str, sesion: requests.Session,
     return []
 
 
-def _buscar_searxng(query: str, sesion: requests.Session,
-                    timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
+def _buscar_searxng(
+    query: str, sesion: requests.Session, timeout: int = _TIMEOUT_DEFAULT
+) -> List[Dict]:
     """SearxNG pública (JSON API)."""
     instancias = [
         "https://searx.be/search",
@@ -418,12 +432,14 @@ def _buscar_searxng(query: str, sesion: requests.Session,
                 data = r.json()
                 resultados = []
                 for item in data.get("results", [])[:_MAX_RESULTADOS]:
-                    resultados.append({
-                        "url": item.get("url", ""),
-                        "titulo": item.get("title", ""),
-                        "snippet": item.get("content", "")[:300],
-                        "motor": "searxng",
-                    })
+                    resultados.append(
+                        {
+                            "url": item.get("url", ""),
+                            "titulo": item.get("title", ""),
+                            "snippet": item.get("content", "")[:300],
+                            "motor": "searxng",
+                        }
+                    )
                 if resultados:
                     return resultados
         except Exception:

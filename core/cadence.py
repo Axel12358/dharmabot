@@ -12,6 +12,7 @@ Cualquier lead cuya status es 'replied' o 'booked' sale de la cadence entirely.
 """
 
 from __future__ import annotations
+
 from datetime import date, timedelta
 
 

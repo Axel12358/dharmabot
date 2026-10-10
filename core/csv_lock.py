@@ -16,11 +16,11 @@ Uso:
 El lock es fcntl.flock exclusivo sobre un archivo .lock hermano.
 Todos los escritores DEBEN usar este helper para que funcione.
 """
+
 import csv
 import fcntl
 import time
 from contextlib import contextmanager
-from pathlib import Path
 
 
 @contextmanager
@@ -52,6 +52,7 @@ def csv_locked_rows(csv_path, timeout=180, encoding="utf-8", extrasaction="ignor
                 w.writeheader()
                 w.writerows(rows)
             import os
+
             os.replace(tmp_path, csv_path)
         finally:
             try:
@@ -71,8 +72,14 @@ def _clave_fila(r: dict) -> tuple:
 
 
 def _na_valor(v) -> bool:
-    return (not str(v or "").strip()
-            or str(v or "").strip().lower() in ("n/a", "na", "none", "null", "-", "?"))
+    return not str(v or "").strip() or str(v or "").strip().lower() in (
+        "n/a",
+        "na",
+        "none",
+        "null",
+        "-",
+        "?",
+    )
 
 
 def escribir_fusionando(csv_path, filas_calculadas, timeout=180):
@@ -84,6 +91,7 @@ def escribir_fusionando(csv_path, filas_calculadas, timeout=180):
     Correcto para writer-mutadores (loop_completar, completar_na, fb_og).
     """
     from core.csv_lock import csv_locked_rows
+
     with csv_locked_rows(csv_path, timeout=timeout) as (frescas, _fn):
         idx = {_clave_fila(r): r for r in filas_calculadas}
         exist = set()

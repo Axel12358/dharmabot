@@ -7,6 +7,7 @@ crea la página de Facebook del evento 2027, la detectamos y la confirmamos.
 
 Reusa el buscador multi-motor (Fase 3) para esquivar rate-limits de DDG.
 """
+
 from __future__ import annotations
 
 import csv
@@ -23,18 +24,31 @@ if str(PROJECT_ROOT) not in sys.path:
 PRED_PATH = PROJECT_ROOT / "eventos_predichos_2027.csv"
 OUT_PATH = PROJECT_ROOT / "eventos_confirmados_2027.csv"
 
-_MESES = {"enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5,
-          "junio": 6, "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10,
-          "noviembre": 11, "diciembre": 12}
+_MESES = {
+    "enero": 1,
+    "febrero": 2,
+    "marzo": 3,
+    "abril": 4,
+    "mayo": 5,
+    "junio": 6,
+    "julio": 7,
+    "agosto": 8,
+    "septiembre": 9,
+    "octubre": 10,
+    "noviembre": 11,
+    "diciembre": 12,
+}
 
 
 def _buscar():
     from scrapers.facebook_dorks import _buscar_dork_multimotor_tor
+
     return _buscar_dork_multimotor_tor
 
 
 def _extracto():
     from scrapers.event_extractor import EventExtractor
+
     return EventExtractor()
 
 
@@ -75,8 +89,15 @@ def monitor_2027(max_candidatos: int = 25, timeout: int = 15) -> list[dict]:
 
     buscar = _buscar()
     ex = _extracto()
-    campos = ["base", "nombre_encontrado", "link", "fecha_2027",
-              "organizador_pred", "lugar_pred", "confianza_base"]
+    campos = [
+        "base",
+        "nombre_encontrado",
+        "link",
+        "fecha_2027",
+        "organizador_pred",
+        "lugar_pred",
+        "confianza_base",
+    ]
 
     def _buscar_segura(dork, timeout, tope=45):
         box = {}
@@ -86,6 +107,7 @@ def monitor_2027(max_candidatos: int = 25, timeout: int = 15) -> list[dict]:
                 box["r"] = buscar(dork, timeout)
             except Exception:
                 box["r"] = []
+
         t = threading.Thread(target=_w, daemon=True)
         t.start()
         t.join(tope)
@@ -127,15 +149,17 @@ def monitor_2027(max_candidatos: int = 25, timeout: int = 15) -> list[dict]:
             if url in vistos:
                 continue
             vistos.add(url)
-            confirmados.append({
-                "base": base,
-                "nombre_encontrado": hit.get("titulo", "")[:120],
-                "link": url,
-                "fecha_2027": fecha,
-                "organizador_pred": p.get("organizador", ""),
-                "lugar_pred": p.get("lugar", ""),
-                "confianza_base": p.get("confianza", ""),
-            })
+            confirmados.append(
+                {
+                    "base": base,
+                    "nombre_encontrado": hit.get("titulo", "")[:120],
+                    "link": url,
+                    "fecha_2027": fecha,
+                    "organizador_pred": p.get("organizador", ""),
+                    "lugar_pred": p.get("lugar", ""),
+                    "confianza_base": p.get("confianza", ""),
+                }
+            )
         time.sleep(random.uniform(2.0, 4.0))
         # escritura incremental: si se detiene, conservamos lo confirmado
         _guardar()

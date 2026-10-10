@@ -5,10 +5,11 @@
 - Guarda incrementalmente para no perder avance si se corta la red.
 - Fusiona los hallazgos al CSV principal bajo lock (nunca pisa el bot).
 """
+
 from __future__ import annotations
 
-import json
 import csv
+import json
 import time
 from pathlib import Path
 
@@ -42,9 +43,21 @@ LISTA_URLS_EXTRA = [
     "https://www.goabase.net/api/party/jsonld/?status=update",
 ]
 DETALLE_URL = "https://www.goabase.net/api/party/jsonld/{eid}"
-CAMPOS = ["nombre", "fecha", "lugar", "pais", "continente", "subcontinente",
-          "fuente", "organizador", "email", "link", "subgenero", "tipo_lugar",
-          "contactos"]
+CAMPOS = [
+    "nombre",
+    "fecha",
+    "lugar",
+    "pais",
+    "continente",
+    "subcontinente",
+    "fuente",
+    "organizador",
+    "email",
+    "link",
+    "subgenero",
+    "tipo_lugar",
+    "contactos",
+]
 ANIOS = [2028, 2027, 2026]
 TOPE_SEG = 240  # tope de reloj de pared por corrida
 
@@ -84,9 +97,22 @@ def _normalizar(d):
         kw = [d["keywords"]]
     for k in kw:
         kk = (k or "").lower()
-        if any(s in kk for s in ("goa", "psy", "dark", "forest", "hitech",
-                                 "full", "progressive", "suomi", "chill",
-                                 "bient", "ambient")):
+        if any(
+            s in kk
+            for s in (
+                "goa",
+                "psy",
+                "dark",
+                "forest",
+                "hitech",
+                "full",
+                "progressive",
+                "suomi",
+                "chill",
+                "bient",
+                "ambient",
+            )
+        ):
             subgenero = kk if isinstance(k, str) else str(k)
             break
     return {
@@ -94,7 +120,8 @@ def _normalizar(d):
         "fecha": fecha,
         "lugar": loc.get("name", "N/A"),
         "pais": addr.get("addressCountry", "N/A"),
-        "continente": "", "subcontinente": "",
+        "continente": "",
+        "subcontinente": "",
         "fuente": "Goabase",
         "organizador": org.get("name", "N/A"),
         "email": email if email else "N/A",
@@ -158,9 +185,20 @@ def escanear():
     if nuevos:
         escribir = not SALIDA.exists()
         with SALIDA.open("a", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=["nombre", "fecha", "lugar", "pais",
-                                              "organizador", "email", "link",
-                                              "fuente", "descripcion"])
+            w = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "nombre",
+                    "fecha",
+                    "lugar",
+                    "pais",
+                    "organizador",
+                    "email",
+                    "link",
+                    "fuente",
+                    "descripcion",
+                ],
+            )
             if escribir:
                 w.writeheader()
             w.writerows(nuevos)
@@ -177,8 +215,7 @@ def escanear():
                     estado.append({c: ev.get(c, "") for c in CAMPOS})
                     vistos.add(ev["link"])
                     agregados += 1
-    print(f"  [goabase] nuevos 2026-2028: {len(nuevos)} -> CSV principal: "
-          f"{agregados} agregados")
+    print(f"  [goabase] nuevos 2026-2028: {len(nuevos)} -> CSV principal: {agregados} agregados")
     return nuevos
 
 

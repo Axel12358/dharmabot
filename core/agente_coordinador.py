@@ -19,21 +19,26 @@ import csv
 import json
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutTimeout
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from core.deduplicador import Deduplicador
-from core.task_queue import TaskQueue
-
 from scrapers import (
-    scrape_goabase, scrape_songkick, scrape_ra,
+    scrape_ektoplazm,
     scrape_facebook_events,
-    scrape_reddit_psy, scrape_psytrance_pl, scrape_isratrance,
-    scrape_ektoplazm, scrape_meetup_psy
+    scrape_goabase,
+    scrape_isratrance,
+    scrape_meetup_psy,
+    scrape_psytrance_pl,
+    scrape_ra,
+    scrape_reddit_psy,
 )
 from scrapers.telegram.scraper import scrape_telegram_events
+
+from core.deduplicador import Deduplicador
+from core.task_queue import TaskQueue
 
 # Mapeo de nombres de subagentes a funciones reales
 FUNCION_SUBAGENTES: Dict[str, Callable[[], Dict]] = {
@@ -85,10 +90,24 @@ def _leer_csv(filename: str) -> List[Dict]:
 def _escribir_csv(filename: str, eventos: List[Dict]) -> None:
     tmp = filename + ".tmp"
     with open(tmp, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "nombre", "fecha", "lugar", "pais", "continente", "subcontinente",
-            "fuente", "organizador", "email", "link", "subgenero", "tipo_lugar"
-        ], extrasaction="ignore")
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "nombre",
+                "fecha",
+                "lugar",
+                "pais",
+                "continente",
+                "subcontinente",
+                "fuente",
+                "organizador",
+                "email",
+                "link",
+                "subgenero",
+                "tipo_lugar",
+            ],
+            extrasaction="ignore",
+        )
         writer.writeheader()
         for ev in eventos:
             out = dict(ev)
@@ -130,7 +149,12 @@ def _timeout_por_nombre(nombre: str) -> int:
 def _leer_subagentes_activos(activos: Optional[List[str]] = None) -> List[Dict]:
     """Carga la lista de subagentes, filtrando por los activos en config_modulos.json."""
     _SUBAGENTES_DEFECTO = [
-        {"nombre": "resident_advisor", "funcion": "scrape_resident_advisor", "usa_tor": True, "timeout": 90},
+        {
+            "nombre": "resident_advisor",
+            "funcion": "scrape_resident_advisor",
+            "usa_tor": True,
+            "timeout": 90,
+        },
         {"nombre": "telegram", "funcion": "scrape_telegram", "usa_tor": True, "timeout": 120},
         {"nombre": "reddit", "funcion": "scrape_reddit", "usa_tor": True, "timeout": 4},
         {"nombre": "psytrance_pl", "funcion": "scrape_psytrance_pl", "usa_tor": True, "timeout": 6},
@@ -187,9 +211,9 @@ def _ejecutar_subagente(ag: Dict) -> Dict:
         return resultado
 
 
-def ejecutar_agentes(activos: Optional[List[str]] = None,
-                     max_simultaneos: int = 5,
-                     dry_run: bool = False) -> int:
+def ejecutar_agentes(
+    activos: Optional[List[str]] = None, max_simultaneos: int = 5, dry_run: bool = False
+) -> int:
     """Ejecuta los subagentes en paralelo y devuelve el nº de eventos NUEVOS
     añadidos al CSV (aditivo, no duplica; 0 si ya estaban todos vistos).
 
@@ -219,10 +243,12 @@ def ejecutar_agentes(activos: Optional[List[str]] = None,
 
     # Encolar subagentes (persistente, idempotente)
     for ag in registro:
-        cola.encolar(ag["nombre"],
-                     timeout=ag.get("timeout", TIMEOUT_DEFECTO),
-                     prioridad=ag.get("prioridad", 5),
-                     usa_tor=bool(ag.get("usa_tor", False)))
+        cola.encolar(
+            ag["nombre"],
+            timeout=ag.get("timeout", TIMEOUT_DEFECTO),
+            prioridad=ag.get("prioridad", 5),
+            usa_tor=bool(ag.get("usa_tor", False)),
+        )
 
     metricas_por_agente: Dict[str, Dict[str, Any]] = {}
     todos_eventos: List[Dict] = []
@@ -231,10 +257,7 @@ def ejecutar_agentes(activos: Optional[List[str]] = None,
         futuros = {}
         for ag in registro:
             timeout = _timeout_por_nombre(ag["nombre"])
-            futuros[ag["nombre"]] = (
-                pool.submit(_ejecutar_subagente, ag),
-                timeout,
-                time.time())
+            futuros[ag["nombre"]] = (pool.submit(_ejecutar_subagente, ag), timeout, time.time())
 
         for nombre, (fut, timeout, t_submit) in futuros.items():
             entrada = {
@@ -258,8 +281,9 @@ def ejecutar_agentes(activos: Optional[List[str]] = None,
 
                 todos_eventos.extend(evs_normalizados)
                 estado = "✅" if evs_normalizados else "⚠️"
-                print(f"  {estado} {nombre}: {len(evs_normalizados)} eventos "
-                      f"({entrada['detalle']})")
+                print(
+                    f"  {estado} {nombre}: {len(evs_normalizados)} eventos ({entrada['detalle']})"
+                )
             except FutTimeout:
                 entrada["error"] = "timeout"
                 print(f"  ⚠️ {nombre}: timeout ({timeout}s) — omitido")
@@ -269,10 +293,11 @@ def ejecutar_agentes(activos: Optional[List[str]] = None,
             finally:
                 entrada["tiempo"] = round(time.time() - t_ag, 2)
                 metricas_por_agente[nombre] = entrada
-                cola.marcar_completada(nombre,
-                                       resultado={"eventos": entrada["eventos"],
-                                                  "tiempo": entrada["tiempo"]},
-                                       error=entrada["error"])
+                cola.marcar_completada(
+                    nombre,
+                    resultado={"eventos": entrada["eventos"], "tiempo": entrada["tiempo"]},
+                    error=entrada["error"],
+                )
     cola.guardar()
 
     print(f"\n📊 Total bruto recolectado: {len(todos_eventos)} eventos")
@@ -285,11 +310,14 @@ def ejecutar_agentes(activos: Optional[List[str]] = None,
     # Sin esto se SOBRESCRIBE el enriquecimiento concurrente con el snapshot
     # stale leído al inicio del ciclo. Solo se añaden eventos nuevos.
     from core.csv_lock import csv_locked_rows
+
     with csv_locked_rows(OUTPUT_TODOS) as (frescas, _fn):
-        vistos = {(r.get('link', '') or f"{r.get('nombre','')}|{r.get('fecha','')}") for r in frescas}
+        vistos = {
+            (r.get("link", "") or f"{r.get('nombre', '')}|{r.get('fecha', '')}") for r in frescas
+        }
         add = []
         for e in nuevos:
-            k = (e.get('link', '') or f"{e.get('nombre','')}|{e.get('fecha','')}")
+            k = e.get("link", "") or f"{e.get('nombre', '')}|{e.get('fecha', '')}"
             if k and k not in vistos:
                 vistos.add(k)
                 add.append(e)
@@ -298,7 +326,9 @@ def ejecutar_agentes(activos: Optional[List[str]] = None,
             consolidados = list(frescas)
         else:
             consolidados = list(frescas) + add
-    print(f"📈 Total consolidado: {len(consolidados) - len(add)} + {len(add)} = {len(consolidados)}")
+    print(
+        f"📈 Total consolidado: {len(consolidados) - len(add)} + {len(add)} = {len(consolidados)}"
+    )
 
     if not dry_run:
         dedup.registrar_vistos(nuevos)
@@ -308,12 +338,15 @@ def ejecutar_agentes(activos: Optional[List[str]] = None,
         # Supervisión de álgebra lineal (opcional, aditiva)
         try:
             from core.algebra_lineal import supervisar_y_mejorar
+
             _res = supervisar_y_mejorar(csv_path=OUTPUT_TODOS, aplicar_cambios=True)
             _rs = _res.get("resumen", {}) if isinstance(_res, dict) else {}
-            print("🧮 Supervisión algebra lineal: "
-                  f"{_rs.get('duplicados_eliminados', 0)} duplicados, "
-                  f"{_rs.get('subgeneros_rellenados', 0)} subgéneros, "
-                  f"{_rs.get('tipos_lugar_rellenados', 0)} tipos de lugar")
+            print(
+                "🧮 Supervisión algebra lineal: "
+                f"{_rs.get('duplicados_eliminados', 0)} duplicados, "
+                f"{_rs.get('subgeneros_rellenados', 0)} subgéneros, "
+                f"{_rs.get('tipos_lugar_rellenados', 0)} tipos de lugar"
+            )
         except Exception as e:
             print(f"⚠️ Supervisión algebra: {type(e).__name__}: {e}")
     else:
@@ -348,8 +381,9 @@ def ejecutar_agentes(activos: Optional[List[str]] = None,
     for nombre, m in metricas_por_agente.items():
         print(f"   {nombre}: {m['eventos']} eventos (tiempo {m['tiempo']}s)")
 
-    print(f"\n✅ Completado. Nuevos añadidos: {len(nuevos)} | "
-          f"Total consolidado: {len(consolidados)}")
+    print(
+        f"\n✅ Completado. Nuevos añadidos: {len(nuevos)} | Total consolidado: {len(consolidados)}"
+    )
     return len(nuevos)
 
 

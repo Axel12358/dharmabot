@@ -66,8 +66,7 @@ class Deduplicador:
                 data = json.load(f)
             if isinstance(data, dict):
                 self._hashes = {
-                    k: v for k, v in data.items()
-                    if isinstance(k, str) and isinstance(v, str)
+                    k: v for k, v in data.items() if isinstance(k, str) and isinstance(v, str)
                 }
         except (json.JSONDecodeError, IOError, ValueError):
             self._hashes = {}

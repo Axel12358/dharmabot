@@ -28,7 +28,6 @@ import json
 import os
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
@@ -41,11 +40,15 @@ if _PROJECT_ROOT not in sys.path:
 try:
     from core.tor_manager import tor_disponible as _tor_ok
 except ImportError:
-    _tor_ok = lambda: False
+
+    def _tor_ok():
+        return False
+
 
 # --- SearXNG availability check ---
 SEARXNG_URL = os.environ.get("SEARXNG_URL", "http://127.0.0.1:8888")
 _searxng_available = None
+
 
 def _check_searxng_available() -> bool:
     global _searxng_available
@@ -53,11 +56,13 @@ def _check_searxng_available() -> bool:
         return _searxng_available
     try:
         import requests
+
         r = requests.get(f"{SEARXNG_URL}/search", params={"q": "test", "format": "json"}, timeout=5)
         _searxng_available = r.status_code == 200
     except Exception:
         _searxng_available = False
     return _searxng_available
+
 
 # --- State files ---
 _ESTADO_FILE = Path(_PROJECT_ROOT) / "mcp_organizador_estado.json"
@@ -122,7 +127,8 @@ class MCPOrganizador:
             motores.append("searxng")
         # Google Playwright if Playwright installed
         try:
-            import playwright
+            import playwright  # noqa: F401 — solo comprobar disponibilidad
+
             motores.append("google_playwright")
         except ImportError:
             pass
@@ -236,6 +242,7 @@ class MCPOrganizador:
         # Get or create deduplicator
         try:
             from core.deduplicador import Deduplicador
+
             if self._dedup is None:
                 self._dedup = Deduplicador()
                 # Register existing events from repo
@@ -287,8 +294,7 @@ class MCPOrganizador:
             if nombre not in tareas:
                 continue
             if time.time() > fin:
-                print(f"  ⏰ MCP Organizador: timeout global alcanzado, "
-                      f"omitimos {nombre}")
+                print(f"  ⏰ MCP Organizador: timeout global alcanzado, omitimos {nombre}")
                 break
 
             tarea = tareas[nombre]
@@ -353,8 +359,10 @@ class MCPOrganizador:
         self._agregar_al_repo(eventos_finales)
         self.guardar_estado()
 
-        print(f"\n📊 MCP Organizador: {len(eventos_finales)} eventos nuevos "
-              f"(de {len(todos_eventos)} brutos)")
+        print(
+            f"\n📊 MCP Organizador: {len(eventos_finales)} eventos nuevos "
+            f"(de {len(todos_eventos)} brutos)"
+        )
         print("=" * 60)
 
         return eventos_finales
@@ -387,6 +395,7 @@ class MCPOrganizador:
         try:
             if nombre == "facebook_dorks":
                 from scrapers.facebook_dorks import scrape_facebook_dorks
+
                 # facebook_dorks devuelve dict con hallazgos + eventos
                 resultado = scrape_facebook_dorks()
                 # Los eventos encontrados se devuelven para que el orquestador
@@ -400,17 +409,20 @@ class MCPOrganizador:
 
             elif nombre == "instagram_dorks":
                 from scrapers.instagram_dorks import scrape_instagram_dorks
+
                 eventos = scrape_instagram_dorks(timeout=timeout)
                 metricas["eventos_encontrados"] = len(eventos)
 
             elif nombre == "dorks_unificado":
                 from scrapers.dorks_resultados import scrape_dorks_resultados
+
                 eventos = scrape_dorks_resultados(dorks=dorks, motores=motores, timeout=timeout)
                 metricas["eventos_encontrados"] = len(eventos)
 
             else:
                 # Generic fallback using dorks_resultados
                 from scrapers.dorks_resultados import buscar_y_clasificar
+
                 eventos = buscar_y_clasificar(
                     dorks=dorks,
                     motores=motores,
@@ -423,12 +435,10 @@ class MCPOrganizador:
 
             # Update source stats
             if nombre in self._fuentes:
-                self._fuentes[nombre]["ultima_ejecucion"] = (
-                    datetime.now(timezone.utc).isoformat()
-                )
-                self._fuentes[nombre]["total_eventos"] = (
-                    self._fuentes[nombre].get("total_eventos", 0) + len(eventos)
-                )
+                self._fuentes[nombre]["ultima_ejecucion"] = datetime.now(timezone.utc).isoformat()
+                self._fuentes[nombre]["total_eventos"] = self._fuentes[nombre].get(
+                    "total_eventos", 0
+                ) + len(eventos)
                 self._fuentes[nombre]["total_ejecuciones"] = (
                     self._fuentes[nombre].get("total_ejecuciones", 0) + 1
                 )
@@ -576,23 +586,23 @@ class MCPOrganizador:
             for c in todas_ciudades[:25]:
                 ciudad = c["ciudad"]
                 for kw in GROUP_KEYWORDS[:3]:
-                    dorks.append(f'{sub} {ciudad} {kw} facebook')
+                    dorks.append(f"{sub} {ciudad} {kw} facebook")
 
         for sub in subgeneros:
             for kw in GROUP_KEYWORDS[:4]:
-                dorks.append(f'{sub} {kw} facebook group')
+                dorks.append(f"{sub} {kw} facebook group")
 
         PAGE_KEYWORDS = ["página", "page", "oficial", "productora", "booking"]
         for sub in subgeneros[:8]:
             for c in todas_ciudades[:15]:
                 ciudad = c["ciudad"]
                 for kw in PAGE_KEYWORDS[:2]:
-                    dorks.append(f'{sub} {ciudad} {kw} facebook page')
+                    dorks.append(f"{sub} {ciudad} {kw} facebook page")
 
         EMAIL_KEYWORDS = ['"@gmail.com"', '"@outlook.com"', '"@protonmail.com"']
         for sub in subgeneros[:6]:
             for email_kw in EMAIL_KEYWORDS[:2]:
-                dorks.append(f'{sub} organizador {email_kw} facebook')
+                dorks.append(f"{sub} organizador {email_kw} facebook")
 
         return list(dict.fromkeys(dorks))[:40]
 
@@ -612,25 +622,25 @@ class MCPOrganizador:
 
         PSY_HASHTAGS = ["psytrance", "goa", "darkpsy", "forestpsy", "hitech", "psybient"]
         for tag in PSY_HASHTAGS[:8]:
-            dorks.append(f'{tag} instagram event')
-            dorks.append(f'{tag} instagram party')
-            dorks.append(f'{tag} instagram festival')
+            dorks.append(f"{tag} instagram event")
+            dorks.append(f"{tag} instagram party")
+            dorks.append(f"{tag} instagram festival")
 
         for sub in subgeneros[:10]:
             for c in todas_ciudades[:20]:
                 ciudad = c["ciudad"]
-                dorks.append(f'{sub} {ciudad} instagram event')
-                dorks.append(f'{sub} {ciudad} instagram festival')
+                dorks.append(f"{sub} {ciudad} instagram event")
+                dorks.append(f"{sub} {ciudad} instagram festival")
 
         event_kws = ["festival", "rave", "open air", "gathering", "2026"]
         for kw in event_kws[:4]:
             for sub in subgeneros[:6]:
-                dorks.append(f'{sub} {kw} instagram')
+                dorks.append(f"{sub} {kw} instagram")
 
         ORGANIZER_KEYWORDS = ["organizer", "organizador", "promoter", "booking", "crew"]
         for sub in subgeneros[:8]:
             for org_kw in ORGANIZER_KEYWORDS[:3]:
-                dorks.append(f'{sub} {org_kw} instagram')
+                dorks.append(f"{sub} {org_kw} instagram")
 
         return list(dict.fromkeys(dorks))[:40]
 
@@ -639,6 +649,7 @@ class MCPOrganizador:
         # Delegate to dorks_resultados generator
         try:
             from scrapers.dorks_resultados import _generar_dorks_default
+
             return _generar_dorks_default()
         except ImportError:
             # Fallback

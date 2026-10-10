@@ -13,6 +13,7 @@ Respetando:
 
 Hard rule: ALL requests go through Tor. Real IP never used.
 """
+
 from __future__ import annotations
 
 import io
@@ -25,22 +26,15 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Semaphore
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 _PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 # Import from google_stealth
-from core.google_stealth import (
+from core.google_stealth import (  # noqa: E402
     save_loop_config,
-    load_loop_config,
-    _build_random_cookies,
-    _save_google_cookies,
-    _rotate_tor_and_cookies,
-    verificar_tor,
-    obtener_sesion_tor,
-    _build_search_url,
 )
 
 # State file
@@ -93,8 +87,12 @@ def _leer_estado() -> Dict[str, Any]:
             "total_bloqueos": 0,
             "total_resultados": 0,
             "bloqueos_por_tipo": {
-                "captcha": 0, "recaptcha": 0, "sorry": 0,
-                "429": 0, "403": 0, "202": 0,
+                "captcha": 0,
+                "recaptcha": 0,
+                "sorry": 0,
+                "429": 0,
+                "403": 0,
+                "202": 0,
             },
             "tiempo_total_s": 0.0,
         },
@@ -156,23 +154,29 @@ def _ajustar_parametros(estado: Dict[str, Any]) -> Dict[str, Any]:
         max_pausa = max(params["pausa_entre_dorks"][1] - 5, 35)
         params["pausa_entre_dorks"] = [min_pausa, max_pausa]
         # Rotate cookies less frequently
-        params["rotar_cookies_cada"] = min(
-            params["rotar_cookies_cada"] + 1, 5)
-        print(f"  📉 Auto-ajuste: block_rate={block_rate:.1%} → pausas ↓, cookies rotan cada {params['rotar_cookies_cada']} dorks")
+        params["rotar_cookies_cada"] = min(params["rotar_cookies_cada"] + 1, 5)
+        print(
+            f"  📉 Auto-ajuste: block_rate={block_rate:.1%} → pausas ↓, cookies rotan cada {params['rotar_cookies_cada']} dorks"
+        )
 
     # Adjust max dorks based on average time
     if avg_time_per_dork > 30:
         params["max_dorks"] = max(params["max_dorks"] - 2, 3)
-        print(f"  📉 Auto-ajuste: avg_time={avg_time_per_dork:.0f}s → max_dorks ↓ ({params['max_dorks']})")
+        print(
+            f"  📉 Auto-ajuste: avg_time={avg_time_per_dork:.0f}s → max_dorks ↓ ({params['max_dorks']})"
+        )
     elif avg_time_per_dork < 15:
         params["max_dorks"] = min(params["max_dorks"] + 1, 15)
-        print(f"  📈 Auto-ajuste: avg_time={avg_time_per_dork:.0f}s → max_dorks ↑ ({params['max_dorks']})")
+        print(
+            f"  📈 Auto-ajuste: avg_time={avg_time_per_dork:.0f}s → max_dorks ↑ ({params['max_dorks']})"
+        )
 
     return params
 
 
 class _OutputCapture:
     """Context manager to capture stdout/stderr from scraper calls."""
+
     def __init__(self):
         self.buffer = io.StringIO()
         self._old_stdout = None
@@ -230,6 +234,7 @@ def _ejecutar_dorks_modulo(
         with capture:
             if modulo_name == "facebook_dorks":
                 from scrapers.facebook_dorks import scrape_facebook_dorks
+
                 with _TOR_SEMAPHORE:
                     resultado = scrape_facebook_dorks(limite=max_dorks)
                 eventos = len(resultado.get("eventos", []))
@@ -243,6 +248,7 @@ def _ejecutar_dorks_modulo(
 
             elif modulo_name == "dorks_resultados":
                 from scrapers.dorks_resultados import scrape_dorks_resultados
+
                 with _TOR_SEMAPHORE:
                     resultado = scrape_dorks_resultados(limite=max_dorks)
                 metricas["eventos"] = len(resultado)
@@ -250,6 +256,7 @@ def _ejecutar_dorks_modulo(
 
             elif modulo_name == "instagram_dorks":
                 from scrapers.instagram_dorks import scrape_instagram_dorks
+
                 with _TOR_SEMAPHORE:
                     resultado = scrape_instagram_dorks(limite=max_dorks)
                 metricas["eventos"] = len(resultado)
@@ -299,16 +306,18 @@ def ejecutar_loop(
     fin_total = start_time + timeout_total
     rondas_ejecutadas = 0
 
-    print(f"🔄 Loop de auto-mejora: {min(max_rondas, MAX_RUNS_PER_SESSION)} rondas, "
-          f"timeout {timeout_total}s")
+    print(
+        f"🔄 Loop de auto-mejora: {min(max_rondas, MAX_RUNS_PER_SESSION)} rondas, "
+        f"timeout {timeout_total}s"
+    )
 
     for ronda in range(min(max_rondas, MAX_RUNS_PER_SESSION)):
         if time.time() > fin_total:
-            print(f"  ⏰ Loop: timeout global alcanzado en ronda {ronda+1}")
+            print(f"  ⏰ Loop: timeout global alcanzado en ronda {ronda + 1}")
             break
 
         rondas_ejecutadas += 1
-        print(f"\n--- Ronda {ronda+1}/{min(max_rondas, MAX_RUNS_PER_SESSION)} ---")
+        print(f"\n--- Ronda {ronda + 1}/{min(max_rondas, MAX_RUNS_PER_SESSION)} ---")
 
         # Adjust parameters before each round
         params = _ajustar_parametros(estado)
@@ -316,11 +325,14 @@ def ejecutar_loop(
         # Write config to file for scrapers to read
         params_to_write = dict(params)
         params_to_write["timeout_total"] = max(
-            int((fin_total - time.time()) / max(1, min(max_rondas - ronda, 3))), 60)
+            int((fin_total - time.time()) / max(1, min(max_rondas - ronda, 3))), 60
+        )
         _write_config_to_file(params_to_write)
-        print(f"  ⚙️  Config escrita: dorks={params['max_dorks']}, "
-              f"pausa_dorks={params['pausa_entre_dorks']}, "
-              f"cookies_cada={params['rotar_cookies_cada']}")
+        print(
+            f"  ⚙️  Config escrita: dorks={params['max_dorks']}, "
+            f"pausa_dorks={params['pausa_entre_dorks']}, "
+            f"cookies_cada={params['rotar_cookies_cada']}"
+        )
 
         max_dorks = params["max_dorks"]
         timeout_ronda = params_to_write["timeout_total"]
@@ -351,19 +363,23 @@ def ejecutar_loop(
                 block_str = ""
                 if metricas["bloqueos"] > 0:
                     block_str = f" | {metricas['bloqueos']} bloqueos"
-                print(f"    ✅ {modulo}: {metricas['eventos']} eventos "
-                      f"en {metricas['tiempo_s']}s{block_str}")
+                print(
+                    f"    ✅ {modulo}: {metricas['eventos']} eventos "
+                    f"en {metricas['tiempo_s']}s{block_str}"
+                )
 
         # Update params in estado for next round
         estado["parametros"] = params
 
         # Save state after each round
-        estado["ejecuciones"].append({
-            "ronda": ronda + 1,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "metricas": round_metrics,
-            "parametros_usados": params,
-        })
+        estado["ejecuciones"].append(
+            {
+                "ronda": ronda + 1,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "metricas": round_metrics,
+                "parametros_usados": params,
+            }
+        )
         _guardar_estado(estado)
 
         # Between rounds: wait if time remains
@@ -379,13 +395,19 @@ def ejecutar_loop(
 
     cambios = []
     if params_finales["pausa_entre_dorks"] != _DEFAULT_PARAMS["pausa_entre_dorks"]:
-        cambios.append(f"Pausa dorks: {_DEFAULT_PARAMS['pausa_entre_dorks']} → {params_finales['pausa_entre_dorks']}s")
+        cambios.append(
+            f"Pausa dorks: {_DEFAULT_PARAMS['pausa_entre_dorks']} → {params_finales['pausa_entre_dorks']}s"
+        )
     if params_finales["pausa_entre_reintentos"] != _DEFAULT_PARAMS["pausa_entre_reintentos"]:
-        cambios.append(f"Pausa reintentos: {_DEFAULT_PARAMS['pausa_entre_reintentos']} → {params_finales['pausa_entre_reintentos']}s")
+        cambios.append(
+            f"Pausa reintentos: {_DEFAULT_PARAMS['pausa_entre_reintentos']} → {params_finales['pausa_entre_reintentos']}s"
+        )
     if params_finales["max_dorks"] != _DEFAULT_PARAMS["max_dorks"]:
         cambios.append(f"Max dorks: {_DEFAULT_PARAMS['max_dorks']} → {params_finales['max_dorks']}")
     if params_finales["rotar_cookies_cada"] != _DEFAULT_PARAMS["rotar_cookies_cada"]:
-        cambios.append(f"Cookie rotation: cada {_DEFAULT_PARAMS['rotar_cookies_cada']} → cada {params_finales['rotar_cookies_cada']} dorks")
+        cambios.append(
+            f"Cookie rotation: cada {_DEFAULT_PARAMS['rotar_cookies_cada']} → cada {params_finales['rotar_cookies_cada']} dorks"
+        )
 
     summary = {
         "rondas_ejecutadas": rondas_ejecutadas,
@@ -401,7 +423,7 @@ def ejecutar_loop(
     print(f"\n📊 Loop completado: {rondas_ejecutadas} rondas en {elapsed}s")
     print(f"   Eventos totales: {metricas_finales['total_resultados']}")
     print(f"   Bloqueos totales: {metricas_finales['total_bloqueos']}")
-    if metricas_finales['total_bloqueos'] > 0:
+    if metricas_finales["total_bloqueos"] > 0:
         print(f"   Bloqueos por tipo: {metricas_finales['bloqueos_por_tipo']}")
     if cambios:
         print(f"   Cambios: {', '.join(cambios)}")

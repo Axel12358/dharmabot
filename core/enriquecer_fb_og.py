@@ -40,8 +40,8 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from core.http_client import get_html  # curl_cffi + Tor
-from core.tor_manager import renovar_identidad_tor, tor_disponible
+from core.http_client import get_html  # noqa: E402 — sys.path arriba; curl_cffi + Tor
+from core.tor_manager import renovar_identidad_tor, tor_disponible  # noqa: E402
 
 CSV_PATH = _PROJECT_ROOT / "eventos_encontrados.csv"
 
@@ -85,8 +85,12 @@ def _parse_description(desc: str) -> Dict[str, str]:
 
 def _extraer_contactos(texto: str) -> Dict[str, List[str]]:
     contactos: Dict[str, List[str]] = {
-        "email": [], "telegram": [], "instagram": [], "soundcloud": [],
-        "facebook": [], "grupo": [],
+        "email": [],
+        "telegram": [],
+        "instagram": [],
+        "soundcloud": [],
+        "facebook": [],
+        "grupo": [],
     }
     for e in _RE_EMAIL.findall(texto):
         if e.lower().endswith((".png", ".jpg", ".gif", ".webp")):
@@ -107,11 +111,36 @@ def _extraer_contactos(texto: str) -> Dict[str, List[str]]:
             contactos["soundcloud"].append(h)
     # Perfil/page del organizador en Facebook (lo que de verdad sirve para booking;
     # el email rara vez aparece). Excluye rutas reservadas.
-    _RES = {"events", "groups", "pages", "profile.php", "gif", "photo",
-            "watch", "notes", "messages", "help", "settings", "login",
-            "people", "hashtag", "search", "marketplace", "gaming", "jobs",
-            "fundraisers", "community", "privacy", "terms", "about", "reels",
-            "explore", "ads", "business", "notifications"}
+    _RES = {
+        "events",
+        "groups",
+        "pages",
+        "profile.php",
+        "gif",
+        "photo",
+        "watch",
+        "notes",
+        "messages",
+        "help",
+        "settings",
+        "login",
+        "people",
+        "hashtag",
+        "search",
+        "marketplace",
+        "gaming",
+        "jobs",
+        "fundraisers",
+        "community",
+        "privacy",
+        "terms",
+        "about",
+        "reels",
+        "explore",
+        "ads",
+        "business",
+        "notifications",
+    }
     for m in re.finditer(r"facebook\.com/([A-Za-z0-9._]{3,})", texto):
         slug = m.group(1)
         if slug.lower() in _RES:
@@ -142,6 +171,7 @@ def _run_thread(fn, timeout, default=None):
             box["r"] = fn()
         except Exception:
             box["r"] = default
+
     t = threading.Thread(target=_w, daemon=True)
     t.start()
     t.join(timeout)
@@ -160,6 +190,7 @@ def _get_html_safe(url: str, timeout: int):
 
 def _guardar(rows, campos):
     from core.csv_lock import escribir_fusionando
+
     escribir_fusionando(CSV_PATH, rows, timeout=180)
 
 
@@ -182,8 +213,10 @@ def enriquecer(
 
     vacios = {"", "N/A", "None", "nan"}
     objetivos = [
-        r for r in rows
-        if (r.get("link") or "").startswith("http") and "facebook.com/events/" in r["link"]
+        r
+        for r in rows
+        if (r.get("link") or "").startswith("http")
+        and "facebook.com/events/" in r["link"]
         and (
             (r.get("fecha") or "").strip() in vacios
             or (r.get("lugar") or "").strip() in vacios
@@ -212,15 +245,19 @@ def enriquecer(
                     cambios = True
                 parsed = _parse_description(og.get("og:description", ""))
                 if (r.get("fecha") or "").strip() in vacios and parsed.get("fecha"):
-                    r["fecha"] = parsed["fecha"]; cambios = True
+                    r["fecha"] = parsed["fecha"]
+                    cambios = True
                 if (r.get("lugar") or "").strip() in vacios and parsed.get("lugar"):
-                    r["lugar"] = parsed["lugar"]; cambios = True
+                    r["lugar"] = parsed["lugar"]
+                    cambios = True
                 if (r.get("organizador") or "").strip() in vacios and parsed.get("organizador"):
-                    r["organizador"] = parsed["organizador"]; cambios = True
+                    r["organizador"] = parsed["organizador"]
+                    cambios = True
                 contactos = _extraer_contactos(html_text)
                 emails = contactos.get("email", [])
                 if (r.get("email") or "").strip() in vacios and emails:
-                    r["email"] = emails[0]; cambios = True
+                    r["email"] = emails[0]
+                    cambios = True
                 if emails or any(contactos.get(k) for k in ("telegram", "instagram", "soundcloud")):
                     r["contactos"] = json.dumps(contactos, ensure_ascii=False)
                     cambios = True
@@ -233,16 +270,21 @@ def enriquecer(
         # escritura cada iteración (no perder avances si se traba)
         _guardar(rows, campos)
         if (i + 1) % rotar_cada == 0:
-            print(f"  … {i+1}/{len(objetivos)} | +{stats['actualizadas']} | "
-                  f"contactos:{stats['con_contacto']} | fallos:{stats['fallos']}", flush=True)
+            print(
+                f"  … {i + 1}/{len(objetivos)} | +{stats['actualizadas']} | "
+                f"contactos:{stats['con_contacto']} | fallos:{stats['fallos']}",
+                flush=True,
+            )
             try:
                 _rotar_safe()
             except Exception:
                 pass
         time.sleep(0.3)
         if time.time() - inicio > tiempo_max_seg:
-            print(f"  ⏱ tope de tiempo ({tiempo_max_seg}s) alcanzado en {i+1}/{len(objetivos)}",
-                  flush=True)
+            print(
+                f"  ⏱ tope de tiempo ({tiempo_max_seg}s) alcanzado en {i + 1}/{len(objetivos)}",
+                flush=True,
+            )
             break
 
     _guardar(rows, campos)

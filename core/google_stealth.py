@@ -6,7 +6,7 @@ Tor rotation before each dork, CAPTCHA detection with retry, requests fallback.
 
 Hard rule: ALL requests go through Tor (socks5h://127.0.0.1:<port>). Real IP never used.
 """
-import asyncio
+
 import json
 import os
 import random
@@ -21,15 +21,12 @@ from bs4 import BeautifulSoup
 from core.tor_pool import (
     IDENTIDADES_TOR,
     obtener_sesion_tor,
-    verificar_tor,
-    rotar_tor,
     obtener_siguiente_identidad,
-    marcar_circuito_bloqueado,
+    rotar_tor,
+    verificar_tor,
 )
 
-_DATA_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tor_data"
-)
+_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tor_data")
 _PROFILE_DIR = os.path.join(_DATA_DIR, "pw_profile_google")
 _PROFILE_DIR_FIREFOX = os.path.join(_DATA_DIR, "pw_profile_firefox")
 _COOKIES_FILE = os.path.join(_DATA_DIR, "google_cookies.json")
@@ -134,6 +131,7 @@ def get_tor_port(indice_tor: Optional[int] = None) -> int:
 
     try:
         from core.tor_pool import iniciar_pool
+
         iniciar_pool()
         for port, _control in IDENTIDADES_TOR:
             if _tor_puerto_activo(port):
@@ -211,8 +209,9 @@ def load_google_cookies() -> List[dict]:
             with open(_COOKIES_FILE) as f:
                 data = json.load(f)
                 if isinstance(data, list):
-                    valid = [c for c in data
-                             if isinstance(c, dict) and "name" in c and "value" in c]
+                    valid = [
+                        c for c in data if isinstance(c, dict) and "name" in c and "value" in c
+                    ]
                     if valid:
                         return valid
         except Exception:
@@ -290,12 +289,14 @@ def _apply_stealth_sync(page) -> None:
     """Apply dual stealth: undetected-playwright + playwright-stealth."""
     try:
         from undetected_playwright import stealth_sync
+
         stealth_sync(page)
         return
     except Exception:
         pass
     try:
         from playwright_stealth import Stealth
+
         Stealth().apply_stealth_sync(page)
     except Exception:
         pass
@@ -305,12 +306,14 @@ async def _apply_stealth_async(page) -> None:
     """Apply dual stealth async: undetected-playwright + playwright-stealth."""
     try:
         from undetected_playwright import stealth_async
+
         await stealth_async(page)
         return
     except Exception:
         pass
     try:
         from playwright_stealth import Stealth
+
         await Stealth().apply_stealth_async(page)
     except Exception:
         pass
@@ -368,6 +371,7 @@ def _detect_block_from_status(status_code: int) -> Tuple[bool, str]:
 def _build_search_url(dork: str) -> str:
     """Build Google search URL with required params."""
     from urllib.parse import quote_plus
+
     return (
         f"https://www.google.com/search?q={quote_plus(dork)}"
         f"&hl=en&num=10&gbv=1&filter=0&pws=0&tbs=qdr:w"
@@ -482,8 +486,11 @@ def google_search_playwright(
             except Exception:
                 # Fallback: navigate directly with full URL params
                 try:
-                    page.goto(_build_search_url(dork),
-                              timeout=timeout * 1000, wait_until="domcontentloaded")
+                    page.goto(
+                        _build_search_url(dork),
+                        timeout=timeout * 1000,
+                        wait_until="domcontentloaded",
+                    )
                     time.sleep(random.uniform(3, 6))
                 except Exception:
                     pass
@@ -521,7 +528,7 @@ def google_search_playwright(
                 except Exception:
                     pass
 
-        except Exception as e:
+        except Exception:
             html = None
         finally:
             try:
@@ -608,7 +615,7 @@ def google_search_playwright_with_retry(
         if intento < max_retries - 1:
             # Between retries: 45-90s
             wait = random.uniform(45, 90)
-            print(f"    ⏳ Intento {intento+1} falló, pausa {wait:.0f}s antes de reintento...")
+            print(f"    ⏳ Intento {intento + 1} falló, pausa {wait:.0f}s antes de reintento...")
             time.sleep(wait)
 
     # All Playwright retries failed: try requests fallback through Tor
@@ -659,16 +666,20 @@ def _extraer_resultados_google(html: str) -> List[Dict]:
         titulo = h3.get_text(strip=True) if h3 else a.get_text(strip=True)
         if not titulo:
             continue
-        snippet_el = (div.find("span", class_="st")
-                      or div.find("div", attrs={"data-sncf": True})
-                      or div.find("div", class_="VwiC3b"))
+        snippet_el = (
+            div.find("span", class_="st")
+            or div.find("div", attrs={"data-sncf": True})
+            or div.find("div", class_="VwiC3b")
+        )
         snippet = snippet_el.get_text(strip=True) if snippet_el else ""
-        resultados.append({
-            "url": href.split("?")[0].rstrip("/"),
-            "titulo": titulo,
-            "snippet": snippet,
-            "motor": "google",
-        })
+        resultados.append(
+            {
+                "url": href.split("?")[0].rstrip("/"),
+                "titulo": titulo,
+                "snippet": snippet,
+                "motor": "google",
+            }
+        )
     return resultados
 
 
@@ -707,12 +718,14 @@ def google_search_firefox(
         print(f"    ⚠️ Firefox: puerto Tor {socks_port} inactivo, salto al siguiente motor")
         return []
 
-    ua = random.choice([
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0",
-        "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
-    ])
+    ua = random.choice(
+        [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0",
+            "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
+        ]
+    )
     profile_dir = os.path.join(_PROFILE_DIR_FIREFOX, f"circuito_{socks_port}")
     os.makedirs(profile_dir, exist_ok=True)
 
@@ -736,8 +749,7 @@ def google_search_firefox(
                     f"https://www.google.com/search?q={dork}"
                     f"&hl=en&num=10&gbv=1&filter=0&pws=0&tbs=qdr:w"
                 )
-                page.goto(search_url, timeout=timeout * 1000,
-                          wait_until="domcontentloaded")
+                page.goto(search_url, timeout=timeout * 1000, wait_until="domcontentloaded")
                 time.sleep(random.uniform(2, 4))
 
                 page.mouse.move(random.randint(200, 600), random.randint(100, 400))
@@ -791,12 +803,14 @@ def buscar_en_searxng(dork: str, timeout: int = 15) -> List[Dict]:
                 title = item.get("title", "")
                 content = item.get("content", "")
                 if url and title:
-                    out.append({
-                        "url": url.split("?")[0].rstrip("/"),
-                        "titulo": title,
-                        "snippet": content or "",
-                        "motor": "searxng",
-                    })
+                    out.append(
+                        {
+                            "url": url.split("?")[0].rstrip("/"),
+                            "titulo": title,
+                            "snippet": content or "",
+                            "motor": "searxng",
+                        }
+                    )
             return out
     except Exception as e:
         print(f"    ⚠️ SearxNG error: {e}")
@@ -819,7 +833,7 @@ def buscar_en_requests_fallback(
 
     Returns lista de dicts o [] si falla.
     """
-    socks_port = get_tor_port(indice_tor)
+    get_tor_port(indice_tor)  # side effect: asegura puerto del pool
     session = obtener_sesion_tor(indice=indice_tor)
     if session is None:
         return []
@@ -858,6 +872,7 @@ def google_search_prioritario(
     todo y deduplica por URL).
     """
     from core.busqueda_fusionada import fusionar_resultados
+
     return fusionar_resultados(dork, indice_tor=indice_tor, timeout=timeout)
 
 
@@ -868,6 +883,7 @@ def _camoufox_disponible() -> bool:
     """Check if Camoufox is available for import."""
     try:
         import camoufox  # noqa: F401
+
         return True
     except ImportError:
         return False

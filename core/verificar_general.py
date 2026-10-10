@@ -20,7 +20,9 @@ Uso:
     python3 core/verificar_general.py --dry-run  # solo muestra sin escribir
     python3 -c "from core.verificar_general import verificar_general; print(verificar_general(dry_run=True))"
 """
+
 from __future__ import annotations
+
 import csv
 import re
 import sys
@@ -40,16 +42,33 @@ except Exception:
 
 try:
     from scrapers.event_extractor import EventExtractor
+
     _extractor = EventExtractor()
 except Exception:
     _extractor = None
 
 CSV_TODOS = _PROJECT_ROOT / "eventos_encontrados.csv"
 PSY_KEYWORDS = [
-    "psytrance", "psy trance", "goa trance", "goatrance", "forest",
-    "darkpsy", "dark psy", "progressive", "hitech", "hi-tech",
-    "psychill", "psybient", "fullon", "full on", "twilight",
-    "psycore", "suomisaundi", "zenon", "ozora", "boom festival",
+    "psytrance",
+    "psy trance",
+    "goa trance",
+    "goatrance",
+    "forest",
+    "darkpsy",
+    "dark psy",
+    "progressive",
+    "hitech",
+    "hi-tech",
+    "psychill",
+    "psybient",
+    "fullon",
+    "full on",
+    "twilight",
+    "psycore",
+    "suomisaundi",
+    "zenon",
+    "ozora",
+    "boom festival",
 ]
 
 # Regex para detectar psy en snippet
@@ -71,6 +90,7 @@ def _buscar_dork_tor(dork: str, timeout: int = 12) -> Tuple[List[Dict], bool]:
     if "unusual traffic" in html.lower() or "captcha" in html.lower():
         return [], True
     from bs4 import BeautifulSoup
+
     soup = BeautifulSoup(html, "html.parser")
     resultados = []
     # DDG-lite usa <a> con href que contiene uddg= y snippet en td
@@ -113,17 +133,18 @@ def _verificar_psy_via_busqueda(nombre: str, timeout: int = 12) -> bool:
         return False
     # Si algún resultado contiene psy keyword en titulo/snippet, confirma
     for r in resultados:
-        texto = f"{r.get('titulo','')} {r.get('snippet','')} {r.get('url','')}"
+        texto = f"{r.get('titulo', '')} {r.get('snippet', '')} {r.get('url', '')}"
         if PSY_RE.search(texto):
             return True
         # También si el dominio es Goabase/psymedia/psy portal, es hit
-        if "goabase" in r.get("url","").lower() or "psytrance" in r.get("url","").lower():
+        if "goabase" in r.get("url", "").lower() or "psytrance" in r.get("url", "").lower():
             return True
     return False
 
 
-def verificar_general(dry_run: bool = False, timeout_por_busqueda: int = 12,
-                      max_verificar: int = 60) -> Dict:
+def verificar_general(
+    dry_run: bool = False, timeout_por_busqueda: int = 12, max_verificar: int = 60
+) -> Dict:
     """Verifica todos los general y reclasifica. Devuelve stats."""
     if not CSV_TODOS.exists():
         print(f"  ❌ No existe {CSV_TODOS}")
@@ -132,9 +153,24 @@ def verificar_general(dry_run: bool = False, timeout_por_busqueda: int = 12,
     with CSV_TODOS.open(encoding="utf-8") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
-        fieldnames = reader.fieldnames or ["nombre","fecha","lugar","pais","continente","subcontinente","fuente","organizador","email","link","subgenero","tipo_lugar"]
+        fieldnames = reader.fieldnames or [
+            "nombre",
+            "fecha",
+            "lugar",
+            "pais",
+            "continente",
+            "subcontinente",
+            "fuente",
+            "organizador",
+            "email",
+            "link",
+            "subgenero",
+            "tipo_lugar",
+        ]
 
-    general_idx = [i for i, r in enumerate(rows) if (r.get("subgenero") or "").strip().lower() == "general"]
+    general_idx = [
+        i for i, r in enumerate(rows) if (r.get("subgenero") or "").strip().lower() == "general"
+    ]
     total = len(general_idx)
     print(f"🔍 Verificar general: {total} eventos en columna subgenero=='general'")
 
@@ -192,7 +228,9 @@ def verificar_general(dry_run: bool = False, timeout_por_busqueda: int = 12,
         if nuevo_sub != r.get("subgenero"):
             print(f"  ✅ {nombre[:55]:55} | {fuente:20} | general → {nuevo_sub} ({motivo})")
             rows[idx]["subgenero"] = nuevo_sub
-            detalle.append({"nombre": nombre, "fuente": fuente, "nuevo": nuevo_sub, "motivo": motivo})
+            detalle.append(
+                {"nombre": nombre, "fuente": fuente, "nuevo": nuevo_sub, "motivo": motivo}
+            )
         else:
             print(f"  ▫️ {nombre[:55]:55} | {fuente:20} | general (sin hit)")
 
@@ -209,11 +247,18 @@ def verificar_general(dry_run: bool = False, timeout_por_busqueda: int = 12,
             w.writeheader()
             for r in rows:
                 w.writerow(r)
-        print(f"  ✅ CSV actualizado: {CSV_TODOS} ({len(rows)} filas, {reclasificados} reclasificados)")
+        print(
+            f"  ✅ CSV actualizado: {CSV_TODOS} ({len(rows)} filas, {reclasificados} reclasificados)"
+        )
     elif dry_run:
         print(f"  🔍 dry-run: {reclasificados}/{total} reclasificarían (no escrito)")
 
-    return {"total_general": total, "verificados": verificados, "reclasificados": reclasificados, "detalle": detalle}
+    return {
+        "total_general": total,
+        "verificados": verificados,
+        "reclasificados": reclasificados,
+        "detalle": detalle,
+    }
 
 
 if __name__ == "__main__":
@@ -221,7 +266,11 @@ if __name__ == "__main__":
     max_n = 60
     for a in sys.argv:
         if a.startswith("--max="):
-            try: max_n = int(a.split("=")[1])
-            except: pass
+            try:
+                max_n = int(a.split("=")[1])
+            except Exception:
+                pass
     res = verificar_general(dry_run=dry, max_verificar=max_n)
-    print(f"\nResumen: total={res['total_general']} verificados={res['verificados']} reclasificados={res['reclasificados']}")
+    print(
+        f"\nResumen: total={res['total_general']} verificados={res['verificados']} reclasificados={res['reclasificados']}"
+    )

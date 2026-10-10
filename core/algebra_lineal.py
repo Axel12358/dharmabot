@@ -28,12 +28,12 @@ umbral de confianza; nunca sobrescribe datos existentes válidos salvo para
 completar "N/A".
 """
 
-from datetime import date, datetime
 import json
 import os
 import pickle
 import re
 import unicodedata
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -84,18 +84,46 @@ def _tokenizar(texto: Any) -> List[str]:
 
 
 _MESES = {
-    "jan": 1, "january": 1, "ene": 1, "enero": 1,
-    "feb": 2, "february": 2, "febrero": 2,
-    "mar": 3, "march": 3, "marzo": 3,
-    "apr": 4, "april": 4, "abr": 4, "abril": 4,
-    "may": 5, "mayo": 5,
-    "jun": 6, "june": 6, "junio": 6,
-    "jul": 7, "july": 7, "julio": 7,
-    "aug": 8, "august": 8, "ago": 8, "agosto": 8,
-    "sep": 9, "sept": 9, "september": 9, "septiembre": 9,
-    "oct": 10, "october": 10, "octubre": 10,
-    "nov": 11, "november": 11, "noviembre": 11,
-    "dec": 12, "december": 12, "dic": 12, "diciembre": 12,
+    "jan": 1,
+    "january": 1,
+    "ene": 1,
+    "enero": 1,
+    "feb": 2,
+    "february": 2,
+    "febrero": 2,
+    "mar": 3,
+    "march": 3,
+    "marzo": 3,
+    "apr": 4,
+    "april": 4,
+    "abr": 4,
+    "abril": 4,
+    "may": 5,
+    "mayo": 5,
+    "jun": 6,
+    "june": 6,
+    "junio": 6,
+    "jul": 7,
+    "july": 7,
+    "julio": 7,
+    "aug": 8,
+    "august": 8,
+    "ago": 8,
+    "agosto": 8,
+    "sep": 9,
+    "sept": 9,
+    "september": 9,
+    "septiembre": 9,
+    "oct": 10,
+    "october": 10,
+    "octubre": 10,
+    "nov": 11,
+    "november": 11,
+    "noviembre": 11,
+    "dec": 12,
+    "december": 12,
+    "dic": 12,
+    "diciembre": 12,
 }
 
 
@@ -126,8 +154,9 @@ def _fecha_evento(valor: Any) -> Optional[date]:
     m = re.match(r"([a-z]+)\s+(\d{1,2}),?\s*(\d{4})?", v)
     if m:
         try:
-            return date(int(m.group(3) or datetime.now().year),
-                        _mes_numero(m.group(1)), int(m.group(2)))
+            return date(
+                int(m.group(3) or datetime.now().year), _mes_numero(m.group(1)), int(m.group(2))
+            )
         except (ValueError, KeyError):
             return None
     return None
@@ -159,6 +188,7 @@ class VectorizadorTFIDF:
 
     def fit(self, textos: Sequence[Any]) -> "VectorizadorTFIDF":
         from collections import Counter
+
         doc_freq: Counter = Counter()
         n_docs = 0
         for t in textos:
@@ -224,9 +254,9 @@ def vectorizar_textos(lista_de_textos: Sequence[Any]) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # 2) Deduplicación semántica
 # ---------------------------------------------------------------------------
-def deduplicar_semanticamente(eventos_nuevos: List[Dict],
-                              eventos_existentes: List[Dict],
-                              umbral: float = UMBRAL_SIMILITUD) -> List[Dict]:
+def deduplicar_semanticamente(
+    eventos_nuevos: List[Dict], eventos_existentes: List[Dict], umbral: float = UMBRAL_SIMILITUD
+) -> List[Dict]:
     """Devuelve solo los eventos realmente nuevos.
 
     Compara únicamente los NOMBRES de los eventos (no el lugar/organizador,
@@ -376,8 +406,9 @@ def _incrementar_contador() -> int:
 # 3) Subgénero
 # ---------------------------------------------------------------------------
 def _entrenar_subgenero(eventos: List[Dict]) -> Optional[ClasificadorSoftmax]:
-    etiquetados = [ev for ev in eventos
-                   if _limpiar(ev.get("subgenero", "")) not in SUBGENEROS_NO_PSY]
+    etiquetados = [
+        ev for ev in eventos if _limpiar(ev.get("subgenero", "")) not in SUBGENEROS_NO_PSY
+    ]
     if len(etiquetados) < 8:
         return None
     textos = [_texto_evento(e) for e in etiquetados]
@@ -389,8 +420,9 @@ def _entrenar_subgenero(eventos: List[Dict]) -> Optional[ClasificadorSoftmax]:
         clf = ClasificadorSoftmax().fit(X, [ev["subgenero"] for ev in etiquetados])
         if len(clf.clases) < 2:
             return None
-        _guardar_modelo(SUBGENERO_PATH, {"vectorizador": vec.estado(),
-                                         "clasificador": clf.estado()})
+        _guardar_modelo(
+            SUBGENERO_PATH, {"vectorizador": vec.estado(), "clasificador": clf.estado()}
+        )
         return clf
     except Exception:
         return None
@@ -431,13 +463,46 @@ def _predecir(texto_evento: str, modelo: Dict) -> Tuple[str, float]:
 def _regla_tipo_lugar(texto: str) -> Optional[str]:
     """Reglas heurísticas claras. Devuelve 'indoor'/'outdoor' o None."""
     t = _limpiar(texto)
-    indoor = ("club", " bar ", "lounge", "gym", "venue", "hall", "theatre",
-              "theater", "arena", "stadium", "pub", "restaurant", "basement",
-              "warehouse party", "nightclub", "discoteca", "indoor")
-    outdoor = ("festival", "beach", "forest", "open air", "open-air",
-               "outdoor", "park", "garden", "camping", "campsite", "valley",
-               "mountain", "riverbank", "field", "meadow", "lake", "island",
-               "desert", "campsite")
+    indoor = (
+        "club",
+        " bar ",
+        "lounge",
+        "gym",
+        "venue",
+        "hall",
+        "theatre",
+        "theater",
+        "arena",
+        "stadium",
+        "pub",
+        "restaurant",
+        "basement",
+        "warehouse party",
+        "nightclub",
+        "discoteca",
+        "indoor",
+    )
+    outdoor = (
+        "festival",
+        "beach",
+        "forest",
+        "open air",
+        "open-air",
+        "outdoor",
+        "park",
+        "garden",
+        "camping",
+        "campsite",
+        "valley",
+        "mountain",
+        "riverbank",
+        "field",
+        "meadow",
+        "lake",
+        "island",
+        "desert",
+        "campsite",
+    )
     if any(w in t for w in indoor):
         return "indoor"
     if any(w in t for w in outdoor):
@@ -463,8 +528,9 @@ def _entrenar_tipo_lugar(eventos: List[Dict]) -> Optional[ClasificadorSoftmax]:
         clf = ClasificadorSoftmax().fit(X, etiquetas)
         if len(clf.clases) < 2:
             return None
-        _guardar_modelo(TIPO_LUGAR_PATH, {"vectorizador": vec.estado(),
-                                          "clasificador": clf.estado()})
+        _guardar_modelo(
+            TIPO_LUGAR_PATH, {"vectorizador": vec.estado(), "clasificador": clf.estado()}
+        )
         return clf
     except Exception:
         return None
@@ -488,8 +554,9 @@ def _necesita_reentrenar() -> bool:
     return sin_modelos or (_contador_ejecuciones() % RETRAIN_CADA == 0)
 
 
-def supervisar_y_mejorar(csv_path: str = "eventos_encontrados.csv",
-                         aplicar_cambios: bool = True) -> Dict[str, Any]:
+def supervisar_y_mejorar(
+    csv_path: str = "eventos_encontrados.csv", aplicar_cambios: bool = True
+) -> Dict[str, Any]:
     resultado = {
         "timestamp": datetime.now().isoformat(),
         "csv": csv_path,
@@ -505,6 +572,7 @@ def supervisar_y_mejorar(csv_path: str = "eventos_encontrados.csv",
         return resultado
 
     import csv as _csv
+
     try:
         with open(filename, "r", encoding="utf-8") as f:
             eventos = [dict(r) for r in _csv.DictReader(f)]
@@ -541,9 +609,12 @@ def supervisar_y_mejorar(csv_path: str = "eventos_encontrados.csv",
             pred, conf = predecir_subgenero(texto)
             if pred != "N/A" and conf >= UMBRAL_CONFIANZA:
                 ev["subgenero"] = pred
-                resultado["subgeneros_rellenados"].append({
-                    "nombre": ev.get("nombre"), "confianza": round(conf, 3),
-                })
+                resultado["subgeneros_rellenados"].append(
+                    {
+                        "nombre": ev.get("nombre"),
+                        "confianza": round(conf, 3),
+                    }
+                )
             elif cur in ("na", ""):
                 ev["subgenero"] = "N/A"
         # tipo de lugar
@@ -552,10 +623,13 @@ def supervisar_y_mejorar(csv_path: str = "eventos_encontrados.csv",
             pred_t, conf_t = predecir_tipo_lugar(texto)
             if pred_t != "N/A" and conf_t >= UMBRAL_CONFIANZA:
                 ev["tipo_lugar"] = pred_t
-                resultado["tipos_lugar_rellenados"].append({
-                    "nombre": ev.get("nombre"), "tipo": pred_t,
-                    "confianza": round(conf_t, 3),
-                })
+                resultado["tipos_lugar_rellenados"].append(
+                    {
+                        "nombre": ev.get("nombre"),
+                        "tipo": pred_t,
+                        "confianza": round(conf_t, 3),
+                    }
+                )
 
     if aplicar_cambios:
         claves = list(eventos[0].keys())
@@ -565,7 +639,11 @@ def supervisar_y_mejorar(csv_path: str = "eventos_encontrados.csv",
             # Escribe el conjunto ya procesado bajo el lock cooperativo para no
             # pisar agregados concurrentes de otros procesos.
             from core.csv_lock import csv_locked_rows
-            with csv_locked_rows(filename, timeout=180, extrasaction="ignore") as (estado_filas, _fn):
+
+            with csv_locked_rows(filename, timeout=180, extrasaction="ignore") as (
+                estado_filas,
+                _fn,
+            ):
                 estado_filas[:] = eventos
         except Exception as e:
             resultado["error"] = f"No se puede escribir el CSV: {e}"
@@ -587,8 +665,9 @@ def supervisar_y_mejorar(csv_path: str = "eventos_encontrados.csv",
     return resultado
 
 
-def _dedup_semantico_interno(eventos: List[Dict], resultado: Dict[str, Any],
-                             umbral: float = UMBRAL_NOMBRE) -> None:
+def _dedup_semantico_interno(
+    eventos: List[Dict], resultado: Dict[str, Any], umbral: float = UMBRAL_NOMBRE
+) -> None:
     """Elimina duplicados internos (nombre casi idéntico + fechas iguales/±1).
 
     Usa SOLO el nombre del evento y un umbral alto (0.92) para no fusionar
@@ -604,16 +683,19 @@ def _dedup_semantico_interno(eventos: List[Dict], resultado: Dict[str, Any],
                 continue
             if not _mismas_fechas(eventos[i].get("fecha"), eventos[j].get("fecha")):
                 continue
-            sim = _similitud_dos(_limpiar(eventos[i].get("nombre", "")),
-                                 _limpiar(eventos[j].get("nombre", "")))
+            sim = _similitud_dos(
+                _limpiar(eventos[i].get("nombre", "")), _limpiar(eventos[j].get("nombre", ""))
+            )
             if sim >= umbral:
                 marcar.add(j)
-                resultado["duplicados_semanticos"].append({
-                    "conservado": eventos[i].get("nombre"),
-                    "eliminado": eventos[j].get("nombre"),
-                    "similitud": round(sim, 3),
-                    "fecha": eventos[j].get("fecha"),
-                })
+                resultado["duplicados_semanticos"].append(
+                    {
+                        "conservado": eventos[i].get("nombre"),
+                        "eliminado": eventos[j].get("nombre"),
+                        "similitud": round(sim, 3),
+                        "fecha": eventos[j].get("fecha"),
+                    }
+                )
     # NOTA: no se eliminan filas del CSV. Regla innegociable del proyecto:
     # "sumar nunca restar" — la supervisión solo RELLENA campos N/A, no borra
     # eventos (ni siquiera duplicados semánticos, para no perder cobertura de

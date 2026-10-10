@@ -28,7 +28,6 @@ import json
 import os
 import re
 import sys
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -42,9 +41,18 @@ CSV_PATH = os.path.join(_ROOT, "eventos_encontrados.csv")
 CHECKPOINT_PATH = os.path.join(_ROOT, "clasificador_checkpoint.json")
 
 SG_VALIDOS = {
-    "psytrance", "darkpsy", "forest", "hitech", "progressive",
-    "fullon", "goa", "psychill", "psybient", "suomisaundi",
-    "twilight", "psychedelic",
+    "psytrance",
+    "darkpsy",
+    "forest",
+    "hitech",
+    "progressive",
+    "fullon",
+    "goa",
+    "psychill",
+    "psybient",
+    "suomisaundi",
+    "twilight",
+    "psychedelic",
 }
 
 FREELLMPOOL_URL = os.getenv("FREELLMPOOL_URL", "http://localhost:8080/v1/chat/completions")
@@ -75,7 +83,9 @@ def _freellmpool_direct(prompt: str, system: str, temperature: float = 0.05) -> 
     try:
         with __import__("urllib.request", fromlist=["urlopen"]).urlopen(req, timeout=45) as r:
             body = json.loads(r.read().decode("utf-8"))
-        return (body.get("choices") or [{}])[0].get("message", {}).get("content", "").strip() or None
+        return (body.get("choices") or [{}])[0].get("message", {}).get(
+            "content", ""
+        ).strip() or None
     except Exception:
         return None
 
@@ -87,6 +97,7 @@ def _llm_generate(prompt: str, system: str = "", temperature: float = 0.05) -> O
         return resp
     try:
         from core.hibrido import get_hybrid_client
+
         return get_hybrid_client().generate(prompt, system=system, temperature=temperature)
     except Exception:
         return None
@@ -117,21 +128,18 @@ def tool_clasificar_subgeneros(eventos: List[Dict]) -> Dict:
         return {"ok": False, "error": "eventos vacío o inválido"}
     batch_size = 5
     resultados: List[Dict] = []
-    client_tmp = None
-    from core.hibrido import get_hybrid_client
-    client_tmp = get_hybrid_client()
     for i in range(0, len(eventos), batch_size):
-        batch = eventos[i:i + batch_size]
+        batch = eventos[i : i + batch_size]
         lineas = [
-            f"{j}: {e.get('nombre','')[:80]} @ {e.get('lugar','')[:40]}"
+            f"{j}: {e.get('nombre', '')[:80]} @ {e.get('lugar', '')[:40]}"
             for j, e in enumerate(batch)
         ]
         prompt = (
             "Eventos musicales. Clasifica cada uno en un subgénero:\n"
             + "\n".join(lineas)
             + "\nSubgeneros: psytrance,darkpsy,forest,hitech,progressive,"
-              "fullon,goa,psychill,psybient,suomisaundi,twilight,psychedelic,NO_PSY\n"
-              'Responde SOLO JSON array: ["sg0","sg1",...]'
+            "fullon,goa,psychill,psybient,suomisaundi,twilight,psychedelic,NO_PSY\n"
+            'Responde SOLO JSON array: ["sg0","sg1",...]'
         )
         resp = _llm_generate(prompt, "Clasificador. Solo JSON array de strings.", 0.05)
         clasifs = _clean_json_array(resp) if resp else None
@@ -181,21 +189,54 @@ def tool_sugerir_organizador(evento: Dict) -> Dict:
         org = (data or {}).get("organizador", "").strip()
         conf = (data or {}).get("confianza", "baja").strip().lower()
         sg_tokens = (
-            "darkpsy", "forest", "goa", "psytrance", "psy trance", "progressive",
-            "fullon", "psychill", "psybient", "hitech", "hi-tech", "suomisaundi",
-            "twilight", "psychedelic", "zenon", "open air", "festival", "event",
-            "party", "rave", "ritual", "gathering",
+            "darkpsy",
+            "forest",
+            "goa",
+            "psytrance",
+            "psy trance",
+            "progressive",
+            "fullon",
+            "psychill",
+            "psybient",
+            "hitech",
+            "hi-tech",
+            "suomisaundi",
+            "twilight",
+            "psychedelic",
+            "zenon",
+            "open air",
+            "festival",
+            "event",
+            "party",
+            "rave",
+            "ritual",
+            "gathering",
         )
         org_l = org.lower().strip(" .")
         if org.upper() in ("N/A", "") or any(t == org_l or t in org_l.split() for t in sg_tokens):
-            return {"ok": True, "organizador": "", "confianza": "baja", "usable": False,
-                    "razon": "subgenero/generico"}
+            return {
+                "ok": True,
+                "organizador": "",
+                "confianza": "baja",
+                "usable": False,
+                "razon": "subgenero/generico",
+            }
         ok = conf in ("alta", "media")
-        return {"ok": True, "organizador": org if ok else "", "confianza": conf,
-                "usable": ok, "razon": "" if ok else "confianza baja"}
+        return {
+            "ok": True,
+            "organizador": org if ok else "",
+            "confianza": conf,
+            "usable": ok,
+            "razon": "" if ok else "confianza baja",
+        }
     except Exception:
-        return {"ok": True, "organizador": "", "confianza": "baja", "usable": False,
-                "razon": "error parse"}
+        return {
+            "ok": True,
+            "organizador": "",
+            "confianza": "baja",
+            "usable": False,
+            "razon": "error parse",
+        }
 
 
 def _cargar_csv() -> List[Dict]:
@@ -211,8 +252,20 @@ def _guardar_csv(rows: List[Dict]):
     Los escritores concurrentes deben fusionar sobre lectura fresca bajo
     lock (core/csv_lock) en vez de volcar snapshots stale.
     """
-    keys = ["nombre", "fecha", "lugar", "pais", "continente", "subcontinente",
-            "fuente", "organizador", "email", "link", "subgenero", "tipo_lugar"]
+    keys = [
+        "nombre",
+        "fecha",
+        "lugar",
+        "pais",
+        "continente",
+        "subcontinente",
+        "fuente",
+        "organizador",
+        "email",
+        "link",
+        "subgenero",
+        "tipo_lugar",
+    ]
     tmp = CSV_PATH + ".tmp"
     with open(tmp, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=keys, extrasaction="ignore")
@@ -226,12 +279,14 @@ def _guardar_merge_subgenero(cambios: Dict[str, str]):
     """Aplica cambios {clave_link_o_nombre_fecha: subgenero} sobre lectura
     fresca bajo lock exclusivo. No pisa otros campos concurrentes."""
     import sys as _sys
+
     _sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from core.csv_lock import csv_locked_rows
+
     n = 0
     with csv_locked_rows(CSV_PATH) as (rows, _fn):
         for r in rows:
-            k = r.get("link", "") or f"{r.get('nombre','')}|{r.get('fecha','')}"
+            k = r.get("link", "") or f"{r.get('nombre', '')}|{r.get('fecha', '')}"
             if k in cambios:
                 r["subgenero"] = cambios[k]
                 n += 1
@@ -295,17 +350,17 @@ def tool_reclasificar_no_psy(limite: int = 200, batch_size: int = 5) -> Dict:
 
     stats = {"procesados": 0, "reclasificados": 0, "por_llm": 0, "por_regex": 0}
     for k in range(0, len(plan), batch_size):
-        chunk = plan[k:k + batch_size]
+        chunk = plan[k : k + batch_size]
         lineas = [
-            f"{j}: {r.get('nombre','')[:80]} @ {r.get('lugar','')[:40]}"
+            f"{j}: {r.get('nombre', '')[:80]} @ {r.get('lugar', '')[:40]}"
             for j, (_, r) in enumerate(chunk)
         ]
         prompt = (
             "Eventos musicales. Clasifica cada uno:\n"
             + "\n".join(lineas)
             + "\nSubgeneros: psytrance,darkpsy,forest,hitech,progressive,"
-              "fullon,goa,psychill,psybient,suomisaundi,twilight,psychedelic,NO_PSY\n"
-              'Responde SOLO JSON array: ["sg0","sg1",...]'
+            "fullon,goa,psychill,psybient,suomisaundi,twilight,psychedelic,NO_PSY\n"
+            'Responde SOLO JSON array: ["sg0","sg1",...]'
         )
         resp = _llm_generate(prompt, "Clasificador. Solo JSON array de strings.", 0.05)
         clasifs = _clean_json_array(resp) if resp else None
@@ -329,11 +384,13 @@ def tool_reclasificar_no_psy(limite: int = 200, batch_size: int = 5) -> Dict:
     # fresca. No se vuelca el snapshot (evita pisar enriquecimiento concurrente).
     cambios = {}
     for idx, r in plan:
-        k = r.get("link", "") or f"{r.get('nombre','')}|{r.get('fecha','')}"
+        k = r.get("link", "") or f"{r.get('nombre', '')}|{r.get('fecha', '')}"
         if r.get("subgenero", "").strip() not in ("", "no_psy"):
             cambios[k] = r["subgenero"]
     _guardar_merge_subgenero(cambios)
-    stats["total_no_psy_restantes"] = sum(1 for r in rows if r.get("subgenero", "").strip() == "no_psy")
+    stats["total_no_psy_restantes"] = sum(
+        1 for r in rows if r.get("subgenero", "").strip() == "no_psy"
+    )
     stats["ok"] = True
     return stats
 
@@ -390,7 +447,10 @@ TOOLS: Dict[str, Dict[str, Any]] = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "limite": {"type": "integer", "description": "Máximo de no_psy a procesar (0=todos)"},
+                "limite": {
+                    "type": "integer",
+                    "description": "Máximo de no_psy a procesar (0=todos)",
+                },
                 "batch_size": {"type": "integer", "default": 5},
             },
             "required": [],
@@ -418,11 +478,15 @@ def handle_request(msg: Dict) -> Optional[Dict]:
 
     if method == "initialize":
         client_version = (msg.get("params") or {}).get("protocolVersion", "2025-06-18")
-        return _rpc_result(req_id, {
-            "protocolVersion": client_version,
-            "capabilities": {"tools": {"listChanged": False}},
-            "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
-        }, client_version)
+        return _rpc_result(
+            req_id,
+            {
+                "protocolVersion": client_version,
+                "capabilities": {"tools": {"listChanged": False}},
+                "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+            },
+            client_version,
+        )
 
     if method in ("notifications/initialized", "notifications/cancelled", "initialized"):
         return None
@@ -452,14 +516,25 @@ def handle_request(msg: Dict) -> Optional[Dict]:
             result = spec["fn"](**args) if isinstance(args, dict) else spec["fn"](args)
             if not isinstance(result, dict):
                 result = {"value": result}
-            return _rpc_result(req_id, {
-                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
-            })
+            return _rpc_result(
+                req_id,
+                {
+                    "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                },
+            )
         except Exception as e:
-            return _rpc_result(req_id, {
-                "content": [{"type": "text", "text": json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False)}],
-                "isError": True,
-            })
+            return _rpc_result(
+                req_id,
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False),
+                        }
+                    ],
+                    "isError": True,
+                },
+            )
 
     return _rpc_error(req_id, -32601, f"Method not found: {method}")
 
@@ -486,11 +561,15 @@ def self_test():
     test = {
         "ok": True,
         "estado": tool_estado_dataset(),
-        "clasificar_spam": tool_clasificar_spam("Dark Psytrance Festival 20-22 Mar @ Bosque, con line-up completo"),
-        "clasificar_subgeneros": tool_clasificar_subgeneros([
-            {"nombre": "Darkpsy ritual forest night", "lugar": "Amsterdam", "organizador": ""},
-            {"nombre": "Goa beach festival", "lugar": "Goa", "organizador": ""},
-        ]),
+        "clasificar_spam": tool_clasificar_spam(
+            "Dark Psytrance Festival 20-22 Mar @ Bosque, con line-up completo"
+        ),
+        "clasificar_subgeneros": tool_clasificar_subgeneros(
+            [
+                {"nombre": "Darkpsy ritual forest night", "lugar": "Amsterdam", "organizador": ""},
+                {"nombre": "Goa beach festival", "lugar": "Goa", "organizador": ""},
+            ]
+        ),
     }
     print(json.dumps(test, ensure_ascii=False, indent=2))
 

@@ -1,0 +1,3 @@
+core
+loop_completar
+minar_fb_og

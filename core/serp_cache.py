@@ -10,6 +10,7 @@ sobre Google (el motor que se suspende con más facilidad).
 Concurrencia: SQLite en WAL; varias instancias escriben y leen sin pisarse.
 La DB vive en estado_runtime/ (gitignored).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -17,14 +18,15 @@ import json
 import os
 import sqlite3
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 _TTL_SEG = 48 * 3600  # 48h
 _LOCK = threading.Lock()
 
 _DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "estado_runtime", "cache_serp.sqlite3",
+    "estado_runtime",
+    "cache_serp.sqlite3",
 )
 
 
@@ -53,9 +55,7 @@ def cache_get(motor: str, query: str) -> Optional[List[Dict[str, str]]]:
     try:
         con = _db()
         try:
-            row = con.execute(
-                "SELECT ts, datos FROM cache WHERE clave=?", (ck,)
-            ).fetchone()
+            row = con.execute("SELECT ts, datos FROM cache WHERE clave=?", (ck,)).fetchone()
         finally:
             con.close()
         if not row:
@@ -91,9 +91,7 @@ def cache_purge_expired() -> int:
     try:
         con = _db()
         try:
-            cur = con.execute(
-                "DELETE FROM cache WHERE ? - ts > ?", (time_now(), _TTL_SEG)
-            )
+            cur = con.execute("DELETE FROM cache WHERE ? - ts > ?", (time_now(), _TTL_SEG))
             con.commit()
             return cur.rowcount
         finally:
@@ -104,6 +102,7 @@ def cache_purge_expired() -> int:
 
 def _time_now() -> int:
     import time
+
     return int(time.time())
 
 

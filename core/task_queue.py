@@ -62,8 +62,12 @@ class TaskQueue:
             try:
                 tmp = self.archivo + ".tmp"
                 with open(tmp, "w", encoding="utf-8") as f:
-                    json.dump({"tareas": self._tareas, "orden": self._orden},
-                              f, indent=2, ensure_ascii=False)
+                    json.dump(
+                        {"tareas": self._tareas, "orden": self._orden},
+                        f,
+                        indent=2,
+                        ensure_ascii=False,
+                    )
                 os.replace(tmp, self.archivo)
             except (IOError, OSError):
                 pass
@@ -72,18 +76,17 @@ class TaskQueue:
         if len(self._tareas) <= self.limite:
             return
         # Conservar las más recientes por fecha de encolado
-        ordenadas = sorted(self._tareas.items(),
-                           key=lambda kv: kv[1].get("encolada", ""),
-                           reverse=True)
-        self._tareas = dict(ordenadas[:self.limite])
+        ordenadas = sorted(
+            self._tareas.items(), key=lambda kv: kv[1].get("encolada", ""), reverse=True
+        )
+        self._tareas = dict(ordenadas[: self.limite])
         ids = set(self._tareas.keys())
         self._orden = [tid for tid in self._orden if tid in ids]
 
     # ---------- operaciones ----------
-    def encolar(self, nombre: str,
-                timeout: Optional[int] = None,
-                prioridad: Optional[int] = None,
-                **extras) -> str:
+    def encolar(
+        self, nombre: str, timeout: Optional[int] = None, prioridad: Optional[int] = None, **extras
+    ) -> str:
         """Encola una tarea/subagente (idempotente por nombre).
 
         Devuelve el id de la tarea (que coincide con `nombre`).
@@ -105,9 +108,9 @@ class TaskQueue:
             self._tareas[nombre] = tarea
         return nombre
 
-    def marcar_completada(self, nombre: str,
-                          resultado: Optional[Dict[str, Any]] = None,
-                          error: Optional[str] = None) -> bool:
+    def marcar_completada(
+        self, nombre: str, resultado: Optional[Dict[str, Any]] = None, error: Optional[str] = None
+    ) -> bool:
         with self._lock:
             tarea = self._tareas.get(nombre)
             if tarea is None:
@@ -122,13 +125,19 @@ class TaskQueue:
 
     def pendientes(self) -> List[Dict[str, Any]]:
         with self._lock:
-            return [dict(self._tareas[tid]) for tid in self._orden
-                    if self._tareas[tid].get("estado") == "pendiente"]
+            return [
+                dict(self._tareas[tid])
+                for tid in self._orden
+                if self._tareas[tid].get("estado") == "pendiente"
+            ]
 
     def completadas(self) -> List[Dict[str, Any]]:
         with self._lock:
-            return [dict(self._tareas[tid]) for tid in self._orden
-                    if self._tareas[tid].get("estado") in ("completada", "error")]
+            return [
+                dict(self._tareas[tid])
+                for tid in self._orden
+                if self._tareas[tid].get("estado") in ("completada", "error")
+            ]
 
     def obtener(self, nombre: str) -> Optional[Dict[str, Any]]:
         with self._lock:

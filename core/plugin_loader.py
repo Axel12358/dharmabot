@@ -17,9 +17,7 @@ Cómo añadir un nuevo scraper:
 
 import importlib
 import json
-import os
 import re
-import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -160,8 +158,9 @@ def _importar_modulo(ruta_punto: str) -> Optional[Any]:
         return None
 
 
-def _construir_funcion(modulo_ruta: str, atributo: str, kwargs: Dict,
-                       kwargs_inyectar: Optional[List[str]] = None) -> Callable:
+def _construir_funcion(
+    modulo_ruta: str, atributo: str, kwargs: Dict, kwargs_inyectar: Optional[List[str]] = None
+) -> Callable:
     """
     Devuelve una lambda que llama a modulo.atributo(**kwargs).
     kwargs_inyectar: nombres de args que se inyectan en runtime (ej: deduplicador).
@@ -177,6 +176,7 @@ def _construir_funcion(modulo_ruta: str, atributo: str, kwargs: Dict,
             if k == "deduplicador" and _dedup_actual_ref[0] is not None:
                 call_kwargs[k] = _dedup_actual_ref[0]
         return fn(**call_kwargs) if call_kwargs else fn()
+
     return _ejecutar
 
 
@@ -266,8 +266,7 @@ def descubrir_scrapers() -> Dict[str, Dict[str, Any]]:
         kwargs_default = cfg.get("kwargs_default", {})
         kwargs_inyectar = cfg.get("kwargs_inyectar", [])
 
-        funcion = _construir_funcion(modulo_ruta, atributo, kwargs_default,
-                                     kwargs_inyectar)
+        funcion = _construir_funcion(modulo_ruta, atributo, kwargs_default, kwargs_inyectar)
 
         scrapers[nombre] = {
             "funcion": funcion,

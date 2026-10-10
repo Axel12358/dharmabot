@@ -11,6 +11,7 @@ Estrategia sin red (no se cuelga en Tor):
 Reescribe el CSV completo (preservando las 729 filas y todas las columnas):
 es llenar huecos, no restar.
 """
+
 from __future__ import annotations
 
 import csv
@@ -23,10 +24,24 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 CSV = PROJECT_ROOT / "eventos_encontrados.csv"
 
-_SUBGENEROS = ["darkpsy", "forest", "psychill", "psybient", "fullon",
-               "progressive", "goa", "hitech", "twilight", "psycore",
-               "suomisaundi", "zenon", "psychedelic", "psytrance", "dark psy",
-               "forest psy"]
+_SUBGENEROS = [
+    "darkpsy",
+    "forest",
+    "psychill",
+    "psybient",
+    "fullon",
+    "progressive",
+    "goa",
+    "hitech",
+    "twilight",
+    "psycore",
+    "suomisaundi",
+    "zenon",
+    "psychedelic",
+    "psytrance",
+    "dark psy",
+    "forest psy",
+]
 
 # Canal de Telegram -> (pais, continente, subcontinente) real, por la escena.
 CANAL_PAIS = {
@@ -103,24 +118,6 @@ NORMALIZACION_PAISES = {
     "bélgica": "Bélgica",
     "belgica": "Bélgica",
     "belgium": "Bélgica",
-    "holanda": "Países Bajos",
-    "dutch": "Países Bajos",
-    "españa": "España",
-    "spain": "España",
-    "alemania": "Alemania",
-    "germany": "Alemania",
-    "francia": "Francia",
-    "france": "Francia",
-    "italia": "Italia",
-    "italy": "Italia",
-    "portugal": "Portugal",
-    "méxico": "México",
-    "mexico": "México",
-    "argentina": "Argentina",
-    "brasil": "Brasil",
-    "brazil": "Brasil",
-    "canadá": "Canadá",
-    "canada": "Canadá",
 }
 
 
@@ -245,6 +242,7 @@ def completar_na() -> dict:
             r["subgenero"] = _inferir_subgenero(r.get("nombre", ""), r["subgenero"])
 
     from core.csv_lock import escribir_fusionando
+
     escribir_fusionando(CSV, rows, timeout=120)
 
     despues = {c: sum(1 for r in rows if _na(r.get(c, ""))) for c in cols}

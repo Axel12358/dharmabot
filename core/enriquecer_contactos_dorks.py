@@ -9,14 +9,13 @@ multi-motor de Fase 3, que ya es robusto.
 Se ejecuta en lotes acotados (subprocess con kill por wall-clock) porque el
 fetch de la página resultado puede colgar; el CSV se guarda cada iteración.
 """
+
 from __future__ import annotations
 
 import csv
 import json
 import re
 import sys
-import threading
-import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -24,13 +23,15 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 CSV = PROJECT_ROOT / "eventos_encontrados.csv"
 
-from core.enriquecer_fb_og import _extraer_contactos  # regex de contactos
+# noqa: E402 — sys.path se configura arriba a propósito
+from core.enriquecer_fb_og import _extraer_contactos  # noqa: E402
 
 _RE_EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 
 
 def _buscar():
     from scrapers.facebook_dorks import _buscar_dork_multimotor_tor
+
     return _buscar_dork_multimotor_tor
 
 
@@ -40,6 +41,7 @@ def _buscar_segura(dork, timeout, tope=45):
     # quemar 45s en fallback Tor que apenas rinde para dorks de organizador).
     try:
         from core.serp_tor import _buscar_searxng_local
+
         res = _buscar_searxng_local(dork, timeout=timeout)
         return res if res else []
     except Exception:
@@ -54,6 +56,7 @@ def _fetch_contenido(url: str, timeout: int = 12) -> str:
     """Obtiene el texto de una página resultado (curl_cffi directo, sin Tor)."""
     try:
         from curl_cffi import requests as rr
+
         resp = rr.get(url, impersonate="chrome120", timeout=timeout, allow_redirects=True)
         if resp.status_code != 200:
             return ""
@@ -93,8 +96,9 @@ def _extraer_emails_paginas(res: list, top=2, timeout=12) -> dict:
     return contactos
 
 
-def _aplicar_actualizacion(link: str, clave_aux: tuple, email: str,
-                           contactos_json: str, timeout=180) -> bool:
+def _aplicar_actualizacion(
+    link: str, clave_aux: tuple, email: str, contactos_json: str, timeout=180
+) -> bool:
     """Actualiza SOLO email/contactos de la fila matcheada, bajo lock y con
     lectura fresca. NUNCA pisa el CSV con snapshots viejos."""
     try:
@@ -129,20 +133,22 @@ def _aplicar_actualizacion(link: str, clave_aux: tuple, email: str,
 def enriquecer_contactos_dorks(max_n: int = 10, timeout_dork: int = 20) -> dict:
     rows = list(csv.DictReader(open(CSV, encoding="utf-8")))
     objetivos = [
-        r for r in rows
-        if _na(r.get("email", "")) or _na(r.get("contactos", ""))
+        r
+        for r in rows
+        if _na(r.get("email", ""))
+        or _na(r.get("contactos", ""))
         and (r.get("organizador") or r.get("nombre") or "").strip()
     ]
-    objetivos = [r for r in objetivos if (r.get("organizador") or r.get("nombre", "")).strip()][:max_n]
+    objetivos = [r for r in objetivos if (r.get("organizador") or r.get("nombre", "")).strip()][
+        :max_n
+    ]
 
     stats = {"revisadas": len(objetivos), "con_email": 0, "con_contacto": 0}
     for r in objetivos:
         term = (r.get("organizador") or r.get("nombre", "")).strip()
         dork = f'"{term}" psytrance contact email'
         res = _buscar_segura(dork, timeout_dork)
-        texto = " ".join(
-            (hit.get("titulo", "") + " " + hit.get("snippet", "")) for hit in res
-        )
+        texto = " ".join((hit.get("titulo", "") + " " + hit.get("snippet", "")) for hit in res)
         contactos = _extraer_contactos(texto)
         if not contactos.get("email"):
             # emails casi nunca están en snippets: fetchea la página del result

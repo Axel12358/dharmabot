@@ -4,17 +4,20 @@ Fuente: Nominatim (OpenStreetMap) vía Tor, con caché en disco y throttle para
 no ser bloqueado. La tabla COUNTRY_INFO mapea el country_code ISO-2 a nombres
 en español y continente/subcontinente, coincidiendo con el vocabulario del CSV.
 """
+
 from __future__ import annotations
 
 import json
 import time
 from pathlib import Path
 
+from core.http_client import (
+    get_active_proxies,  # noqa: E402  # proxy activo: residencial o Tor, nunca IP real
+)
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 GEO_CACHE = PROJECT_ROOT / "geo_cache.json"
 NOM_URL = "https://nominatim.openstreetmap.org/search"
-# Proxy activo: residencial de terceros si está configurado, si no Tor. Nunca IP real.
-from core.http_client import get_active_proxies
 PROXIES = get_active_proxies()
 _UA = "dharmadhatu_bot/1.0 (eventos psytrance)"
 _last = 0.0
@@ -109,9 +112,14 @@ def geocodificar(lugar: str):
     _last = time.time()
     try:
         import requests
-        r = requests.get(NOM_URL, params={"q": q, "format": "json",
-                        "limit": 1, "addressdetails": 1},
-                        headers={"User-Agent": _UA}, proxies=PROXIES, timeout=10)
+
+        r = requests.get(
+            NOM_URL,
+            params={"q": q, "format": "json", "limit": 1, "addressdetails": 1},
+            headers={"User-Agent": _UA},
+            proxies=PROXIES,
+            timeout=10,
+        )
         if r.status_code == 200:
             data = r.json()
             if data:

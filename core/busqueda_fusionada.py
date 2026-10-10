@@ -14,11 +14,12 @@ Motores (en orden de prioridad definido en fusionar_resultados):
   5. SearxNG     (JSON, lista de instancias públicas)
   6. Google fallback (requests por Tor)
 """
+
 from __future__ import annotations
 
 import random
 import time
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from urllib.parse import quote_plus, unquote
 
 import requests
@@ -26,11 +27,16 @@ import requests
 try:
     from core.tor_pool import (
         IDENTIDADES_TOR,
+    )
+    from core.tor_pool import (
         get_tor_port as _get_tor_port,
+    )
+    from core.tor_pool import (
         obtener_sesion_tor as _obtener_sesion_tor,
     )
 except Exception:
     from core.google_stealth import get_tor_port as _get_tor_port  # type: ignore
+
     _obtener_sesion_tor = None
     IDENTIDADES_TOR = []
 
@@ -92,11 +98,17 @@ def _get(url: str, session: requests.Session, timeout: int) -> Optional[str]:
         r = session.get(url, timeout=timeout)
         if r.status_code == 200:
             low = r.text[:3000].lower()
-            if ("unusual traffic" in low or "captcha" in low
-                    or "recaptcha" in low or "verify you are human" in low
-                    or "/sorry/" in low or "checking your browser" in low
-                    or "bot" in low and "not a bot" not in low
-                    and "detected" in low):
+            if (
+                "unusual traffic" in low
+                or "captcha" in low
+                or "recaptcha" in low
+                or "verify you are human" in low
+                or "/sorry/" in low
+                or "checking your browser" in low
+                or "bot" in low
+                and "not a bot" not in low
+                and "detected" in low
+            ):
                 return None
             return r.text
         return None
@@ -128,7 +140,9 @@ def buscar_en_duckduckgo(dork: str, timeout: int = _TIMEOUT_DEFAULT) -> List[Dic
             # DDG redirige vía /l/?uddg=<url_encoded>&rut=...
             if "duckduckgo.com/l" in href:
                 try:
-                    from urllib.parse import urlparse as _up, parse_qs as _qs
+                    from urllib.parse import parse_qs as _qs
+                    from urllib.parse import urlparse as _up
+
                     full = href if href.startswith("http") else ("https:" + href)
                     params = _qs(_up(full).query)
                     if params.get("uddg"):
@@ -149,12 +163,14 @@ def buscar_en_duckduckgo(dork: str, timeout: int = _TIMEOUT_DEFAULT) -> List[Dic
             snip = snippet_el.select_one(".result__snippet")
             if snip:
                 snippet = snip.get_text(strip=True)
-        resultados.append({
-            "url": destino.split("?")[0].rstrip("/"),
-            "titulo": titulo,
-            "snippet": snippet,
-            "motor": "duckduckgo",
-        })
+        resultados.append(
+            {
+                "url": destino.split("?")[0].rstrip("/"),
+                "titulo": titulo,
+                "snippet": snippet,
+                "motor": "duckduckgo",
+            }
+        )
     return resultados
 
 
@@ -187,7 +203,9 @@ def buscar_en_bing(dork: str, timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
         if href:
             if "bing.com/ck/a" in href:
                 try:
-                    from urllib.parse import urlparse as _up, parse_qs as _qs
+                    from urllib.parse import parse_qs as _qs
+                    from urllib.parse import urlparse as _up
+
                     params = _qs(_up(href).query)
                     if params.get("ru"):
                         destino = unquote(params["ru"][0])
@@ -201,12 +219,14 @@ def buscar_en_bing(dork: str, timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
             continue
         p = li.select_one("p")
         snippet = p.get_text(strip=True) if p else ""
-        resultados.append({
-            "url": destino.split("?")[0].rstrip("/"),
-            "titulo": titulo,
-            "snippet": snippet,
-            "motor": "bing",
-        })
+        resultados.append(
+            {
+                "url": destino.split("?")[0].rstrip("/"),
+                "titulo": titulo,
+                "snippet": snippet,
+                "motor": "bing",
+            }
+        )
     return resultados
 
 
@@ -235,12 +255,14 @@ def buscar_en_startpage(dork: str, timeout: int = _TIMEOUT_DEFAULT) -> List[Dict
         titulo_txt = titulo.get_text(strip=True) if titulo else a.get_text(strip=True)
         snippet_el = item.select_one(".w-gl__description")
         snippet = snippet_el.get_text(strip=True) if snippet_el else ""
-        resultados.append({
-            "url": unquote(href).split("?")[0].rstrip("/"),
-            "titulo": titulo_txt,
-            "snippet": snippet,
-            "motor": "startpage",
-        })
+        resultados.append(
+            {
+                "url": unquote(href).split("?")[0].rstrip("/"),
+                "titulo": titulo_txt,
+                "snippet": snippet,
+                "motor": "startpage",
+            }
+        )
     return resultados
 
 
@@ -271,12 +293,14 @@ def buscar_en_mojeek(dork: str, timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
         if bloque:
             ps = bloque.select_one("p.s")
             snippet = ps.get_text(strip=True) if ps else ""
-        resultados.append({
-            "url": unquote(href).split("?")[0].rstrip("/"),
-            "titulo": titulo,
-            "snippet": snippet,
-            "motor": "mojeek",
-        })
+        resultados.append(
+            {
+                "url": unquote(href).split("?")[0].rstrip("/"),
+                "titulo": titulo,
+                "snippet": snippet,
+                "motor": "mojeek",
+            }
+        )
     return resultados
 
 
@@ -313,12 +337,14 @@ def buscar_en_searxng(dork: str, timeout: int = _TIMEOUT_DEFAULT) -> List[Dict]:
             url_item = (item.get("url", "") or "").strip()
             titulo = (item.get("title", "") or "").strip()
             if url_item and titulo:
-                resultados.append({
-                    "url": url_item.split("?")[0].rstrip("/"),
-                    "titulo": titulo,
-                    "snippet": item.get("content", "") or "",
-                    "motor": "searxng",
-                })
+                resultados.append(
+                    {
+                        "url": url_item.split("?")[0].rstrip("/"),
+                        "titulo": titulo,
+                        "snippet": item.get("content", "") or "",
+                        "motor": "searxng",
+                    }
+                )
         if resultados:
             return resultados
     return resultados
@@ -342,6 +368,7 @@ def buscar_en_google_fallback(
     if session is None:
         return []
     from bs4 import BeautifulSoup
+
     url = (
         f"https://www.google.com/search?q={quote_plus(dork)}"
         f"&hl=en&num=10&gbv=1&filter=0&pws=0&tbs=qdr:w"
@@ -368,12 +395,14 @@ def buscar_en_google_fallback(
             continue
         snippet_el = div.find("span", class_="st") or div.find("div", attrs={"data-sncf": True})
         snippet = snippet_el.get_text(strip=True) if snippet_el else ""
-        resultados.append({
-            "url": href.split("?")[0].rstrip("/"),
-            "titulo": titulo,
-            "snippet": snippet,
-            "motor": "google",
-        })
+        resultados.append(
+            {
+                "url": href.split("?")[0].rstrip("/"),
+                "titulo": titulo,
+                "snippet": snippet,
+                "motor": "google",
+            }
+        )
     return resultados
 
 
@@ -420,12 +449,14 @@ def fusionar_resultados(
             if not url or url in urls_vistas:
                 continue
             urls_vistas.add(url)
-            fusionado.append({
-                "url": url,
-                "titulo": r.get("titulo", "") or r.get("title", ""),
-                "snippet": r.get("snippet", "") or r.get("content", ""),
-                "motor": r.get("motor") or nombre,
-            })
+            fusionado.append(
+                {
+                    "url": url,
+                    "titulo": r.get("titulo", "") or r.get("title", ""),
+                    "snippet": r.get("snippet", "") or r.get("content", ""),
+                    "motor": r.get("motor") or nombre,
+                }
+            )
 
         # Pausa breve entre motores (behaviour humano sobre Tor)
         time.sleep(random.uniform(*_PAUSA_ENTRE_MOTORES))

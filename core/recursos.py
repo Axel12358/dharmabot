@@ -39,6 +39,7 @@ def _get_anti_block_ua() -> List[str]:
     """Devuelve la lista de User-Agents de scrapers/anti_block si existe."""
     try:
         from scrapers.anti_block import USER_AGENTS
+
         if isinstance(USER_AGENTS, list) and USER_AGENTS:
             return list(USER_AGENTS)
     except Exception:
@@ -58,6 +59,7 @@ def listar_user_agents() -> List[str]:
 def _get_anti_block_ua() -> List[str]:
     try:
         from scrapers.anti_block import USER_AGENTS
+
         return list(USER_AGENTS) if isinstance(USER_AGENTS, list) else []
     except Exception:
         return []
@@ -116,7 +118,8 @@ def obtener_proxies_dict() -> Optional[Dict[str, str]]:
     """
     # Tor tiene prioridad: nunca usar IP real
     try:
-        from core.tor_pool import verificar_tor, obtener_sesion_tor
+        from core.tor_pool import verificar_tor
+
         if verificar_tor():
             return {"http": "socks5h://127.0.0.1:9050", "https": "socks5h://127.0.0.1:9050"}
     except Exception:
@@ -132,6 +135,7 @@ def obtener_proxies_tor() -> Optional[Dict[str, str]]:
     """Dict de proxies Tor (socks5h://127.0.0.1:9050) o None si Tor no disponible."""
     try:
         from core.tor_pool import verificar_tor
+
         if verificar_tor():
             return {"http": "socks5h://127.0.0.1:9050", "https": "socks5h://127.0.0.1:9050"}
     except Exception:

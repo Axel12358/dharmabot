@@ -29,7 +29,9 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
+
+import requests
 
 _PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PROJECT_ROOT not in sys.path:
@@ -55,13 +57,20 @@ TOR_RENEW_EVERY_SEARCHES = 45
 try:
     from core.tor_pool import (
         iniciar_pool as _pool_iniciar,
-        obtener_sesion_tor as _pool_obtener_sesion,
-        rotar_tor as _pool_rotar,
-        verificar_tor as _pool_verificar,
-        obtener_siguiente_identidad as _pool_siguiente,
-        marcar_circuito_bloqueado as _pool_marcar_bloqueado,
-        IDENTIDADES_TOR as _POOL_IDENTIDADES,
     )
+    from core.tor_pool import (
+        obtener_sesion_tor as _pool_obtener_sesion,
+    )
+    from core.tor_pool import (
+        obtener_siguiente_identidad as _pool_siguiente,
+    )
+    from core.tor_pool import (
+        rotar_tor as _pool_rotar,
+    )
+    from core.tor_pool import (
+        verificar_tor as _pool_verificar,
+    )
+
     _POOL_AVAILABLE = True
 except ImportError:
     _POOL_AVAILABLE = False
@@ -143,7 +152,9 @@ def obtener_proxy_tor() -> Optional[Dict[str, str]]:
     Note: usa socks5h:// (no socks5://) para que DNS se resuelva vía túnel,
     previniendo DNS leaks de la IP real.
     """
-    from core.http_client import get_active_proxies as _gap, _load_proxy_url as _lp
+    from core.http_client import _load_proxy_url as _lp
+    from core.http_client import get_active_proxies as _gap
+
     if _lp():
         return _gap()
     if not tor_disponible():
@@ -160,13 +171,15 @@ def _random_headers() -> Dict[str, str]:
     return {
         "User-Agent": _random_ua(),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": random.choice([
-            "en-US,en;q=0.9",
-            "es-ES,es;q=0.9,en;q=0.8",
-            "en-GB,en;q=0.9",
-            "de-DE,de;q=0.9,en;q=0.8",
-            "fr-FR,fr;q=0.9,en;q=0.8",
-        ]),
+        "Accept-Language": random.choice(
+            [
+                "en-US,en;q=0.9",
+                "es-ES,es;q=0.9,en;q=0.8",
+                "en-GB,en;q=0.9",
+                "de-DE,de;q=0.9,en;q=0.8",
+                "fr-FR,fr;q=0.9,en;q=0.8",
+            ]
+        ),
         "Accept-Encoding": "gzip, deflate",
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
@@ -226,7 +239,9 @@ def _reiniciar_proceso_tor() -> bool:
         try:
             out = subprocess.run(
                 ["pgrep", "-f", f"tor -f {TORRC_PATH}"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             for pid in out.stdout.split():
                 try:

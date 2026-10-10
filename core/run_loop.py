@@ -10,7 +10,9 @@ Etapas:
 1. Goabase 2027 (gratis, Tor) — descubrimiento principal, funciona sin proxy.
 2-5. Requieren proxy residencial de terceros (bloqueados por Tor sin proxy).
 """
+
 from __future__ import annotations
+
 import subprocess
 import sys
 import time
@@ -20,12 +22,18 @@ STAGES = [
     "from core.goabase_2027 import escanear; print('GOABASE', len(escanear()))",
     # --- Las siguientes requieren proxy residencial (DHARMA_PROXY_URL) ---
     "from core.fuentes_extra import recolectar_fuentes; print('FASE4', recolectar_fuentes())",
-    ("from core.enriquecer_fb_og import enriquecer; "
-     "print('OG', enriquecer(max_fetches=4, rotar_cada=1, timeout_por_url=6, tiempo_max_seg=300))"),
-    ("from core.enriquecer_contactos_dorks import enriquecer_contactos_dorks; "
-     "print('DK', enriquecer_contactos_dorks(max_n=8, timeout_dork=12))"),
-    ("from core.monitor_organizadores import monitor_2027; "
-     "print('MON', len(monitor_2027(max_candidatos=8)))"),
+    (
+        "from core.enriquecer_fb_og import enriquecer; "
+        "print('OG', enriquecer(max_fetches=4, rotar_cada=1, timeout_por_url=6, tiempo_max_seg=300))"
+    ),
+    (
+        "from core.enriquecer_contactos_dorks import enriquecer_contactos_dorks; "
+        "print('DK', enriquecer_contactos_dorks(max_n=8, timeout_dork=12))"
+    ),
+    (
+        "from core.monitor_organizadores import monitor_2027; "
+        "print('MON', len(monitor_2027(max_candidatos=8)))"
+    ),
 ]
 
 

@@ -12,14 +12,14 @@ Uso:
   python3 core/auto_optimizer.py              # analítica + scoring
   python3 core/auto_optimizer.py --aplicar    # aplica mejor config
 """
+
 import csv
 import json
 import os
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Set
 
 _PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PROJECT_ROOT not in sys.path:
@@ -33,32 +33,32 @@ CSV_FILE = Path(_PROJECT_ROOT) / "eventos_encontrados.csv"
 # Todos los scrapers conocidos y sus características
 SCRAPER_META = {
     # Estáticos (rápidos, sin Tor)
-    "goabase":              {"tipo": "estatico", "costo": 1},
-    "songkick":             {"tipo": "estatico", "costo": 1},
-    "resident_advisor":     {"tipo": "estatico", "costo": 1},
-    "psytrance_pl":         {"tipo": "estatico", "costo": 1},
-    "ektoplazm":            {"tipo": "estatico", "costo": 1},
-    "psynews":              {"tipo": "estatico", "costo": 1},
-    "isratrance":           {"tipo": "estatico", "costo": 1},
+    "goabase": {"tipo": "estatico", "costo": 1},
+    "songkick": {"tipo": "estatico", "costo": 1},
+    "resident_advisor": {"tipo": "estatico", "costo": 1},
+    "psytrance_pl": {"tipo": "estatico", "costo": 1},
+    "ektoplazm": {"tipo": "estatico", "costo": 1},
+    "psynews": {"tipo": "estatico", "costo": 1},
+    "isratrance": {"tipo": "estatico", "costo": 1},
     # SERP (Tor, rápidos)
-    "reddit_psy":           {"tipo": "serp", "costo": 2},
-    "meetup_psy":           {"tipo": "serp", "costo": 2},
-    "facebook_dorks":       {"tipo": "serp", "costo": 2},
-    "instagram_dorks":      {"tipo": "serp", "costo": 2},
+    "reddit_psy": {"tipo": "serp", "costo": 2},
+    "meetup_psy": {"tipo": "serp", "costo": 2},
+    "facebook_dorks": {"tipo": "serp", "costo": 2},
+    "instagram_dorks": {"tipo": "serp", "costo": 2},
     # Scraping directo (Tor)
-    "edmdancedirectory":    {"tipo": "scraping", "costo": 3},
-    "psytrancefestivals_tv":{"tipo": "scraping", "costo": 3},
-    "psymedia":             {"tipo": "scraping", "costo": 3},
-    "setline":              {"tipo": "scraping", "costo": 3},
-    "psychill_space":       {"tipo": "scraping", "costo": 3},
+    "edmdancedirectory": {"tipo": "scraping", "costo": 3},
+    "psytrancefestivals_tv": {"tipo": "scraping", "costo": 3},
+    "psymedia": {"tipo": "scraping", "costo": 3},
+    "setline": {"tipo": "scraping", "costo": 3},
+    "psychill_space": {"tipo": "scraping", "costo": 3},
     # LLM / Agentes
-    "mcp_organizador":      {"tipo": "agente", "costo": 2},
-    "dorks_resultados":     {"tipo": "agente", "costo": 1},
+    "mcp_organizador": {"tipo": "agente", "costo": 2},
+    "dorks_resultados": {"tipo": "agente", "costo": 1},
     # Pesados (login)
-    "telegram":             {"tipo": "pesado", "costo": 4},
-    "facebook_mcp":         {"tipo": "pesado", "costo": 5},
-    "instagram_scraper":    {"tipo": "pesado", "costo": 5},
-    "fb_playwright_tor":    {"tipo": "pesado", "costo": 5},
+    "telegram": {"tipo": "pesado", "costo": 4},
+    "facebook_mcp": {"tipo": "pesado", "costo": 5},
+    "instagram_scraper": {"tipo": "pesado", "costo": 5},
+    "fb_playwright_tor": {"tipo": "pesado", "costo": 5},
 }
 
 SCRAPERS_LIGEROS = [k for k, v in SCRAPER_META.items() if v["costo"] <= 3]
@@ -113,6 +113,7 @@ def _scrapers_disponibles() -> Set[str]:
     """Verifica qué scrapers son importables y tienen función scrape_*."""
     disponibles = set()
     import importlib
+
     for scraper in SCRAPER_META:
         try:
             mod = importlib.import_module(f"scrapers.{scraper}")
@@ -201,8 +202,7 @@ def optimizar() -> Dict[str, Any]:
     csv_stats = _analizar_csv()
     disponibles = _scrapers_disponibles()
 
-    print(f"\n📊 CSV actual: {csv_stats['total']} eventos, "
-          f"{csv_stats['emails']} emails")
+    print(f"\n📊 CSV actual: {csv_stats['total']} eventos, {csv_stats['emails']} emails")
     print(f"📁 Fuentes: {', '.join(sorted(csv_stats['por_fuente'].keys()))}")
     print(f"🔌 Scrapers disponibles: {len(disponibles)}/{len(SCRAPER_META)}")
 
@@ -224,8 +224,7 @@ def optimizar() -> Dict[str, Any]:
     candidatos.append(("actual", dict(activos_actual)))
 
     # 2. Solo ligeros
-    todos_ligeros = {s: (s in disponibles and s in SCRAPERS_LIGEROS)
-                     for s in SCRAPER_META}
+    todos_ligeros = {s: (s in disponibles and s in SCRAPERS_LIGEROS) for s in SCRAPER_META}
     candidatos.append(("solo_ligeros", todos_ligeros))
 
     # 3. Mix óptimo: estáticos + SERP
@@ -240,8 +239,7 @@ def optimizar() -> Dict[str, Any]:
     candidatos.append(("todos", todos))
 
     # 5. Sin pesados
-    sin_pesados = {s: (s in disponibles and SCRAPER_META[s]["costo"] < 5)
-                   for s in SCRAPER_META}
+    sin_pesados = {s: (s in disponibles and SCRAPER_META[s]["costo"] < 5) for s in SCRAPER_META}
     candidatos.append(("sin_pesados", sin_pesados))
 
     # Evaluar
@@ -253,18 +251,21 @@ def optimizar() -> Dict[str, Any]:
     for nombre, activos in candidatos:
         n = sum(1 for v in activos.values() if v)
         score = _score_config(activos, csv_stats)
-        tipos = set(SCRAPER_META.get(s, {}).get("tipo", "?")
-                    for s, v in activos.items() if v)
+        tipos = set(SCRAPER_META.get(s, {}).get("tipo", "?") for s, v in activos.items() if v)
 
-        print(f"  {nombre:25s} | {n:2d} scrapers | score {score:7.1f} | "
-              f"tipos: {', '.join(sorted(tipos))}")
+        print(
+            f"  {nombre:25s} | {n:2d} scrapers | score {score:7.1f} | "
+            f"tipos: {', '.join(sorted(tipos))}"
+        )
 
-        resultados.append({
-            "nombre": nombre,
-            "activos": activos,
-            "score": score,
-            "n_scrapers": n,
-        })
+        resultados.append(
+            {
+                "nombre": nombre,
+                "activos": activos,
+                "score": score,
+                "n_scrapers": n,
+            }
+        )
 
         if score > mejor_score:
             mejor_score = score
@@ -290,12 +291,14 @@ def optimizar() -> Dict[str, Any]:
 
     # Historial
     historial = _load_json(OPTIMIZER_HISTORY, {"runs": []})
-    historial.setdefault("runs", []).append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "mejor": mejor[0] if mejor else None,
-        "score": mejor_score,
-        "csv_total": csv_stats["total"],
-    })
+    historial.setdefault("runs", []).append(
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "mejor": mejor[0] if mejor else None,
+            "score": mejor_score,
+            "csv_total": csv_stats["total"],
+        }
+    )
     historial["runs"] = historial["runs"][-50:]
     _save_json(OPTIMIZER_HISTORY, historial)
 
@@ -324,6 +327,7 @@ def aplicar_mejor_config():
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--aplicar", action="store_true")
     parser.add_argument("--reset", action="store_true")

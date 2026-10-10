@@ -9,10 +9,11 @@ Ventaja frente a buscadores/Facebook:
 Cada post público expone fecha (<time datetime>) y texto, de donde extraemos
 candidatos a eventos 2025-2027 que luego el pipeline normaliza.
 """
+
 from __future__ import annotations
 
-import re
 import csv
+import re
 from pathlib import Path
 
 from core.http_client import get_html
@@ -22,14 +23,34 @@ SALIDA = PROJECT_ROOT / "eventos_telegram.csv"
 
 # Canales curados de psytrance / festivales / sellos (públicos).
 CANALES = [
-    "psytrance", "goa", "psytrancefestivals", "psychedelictrance",
-    "fullonnation", "darkpsy", "shankra", "boomfestival", "ozora",
-    "voovexperience", "universecestival", "atmanfestival", "hadra",
-    "visionquestfest", "glastonburypsy", "tribalmix", "suntriprecords",
-    "nanobeat", "digestivepsy", "psychedeliccircus", "lostinpsy",
-    "ayahuascaexperience", "sensoriumfestival", "gatheringfest",
+    "psytrance",
+    "goa",
+    "psytrancefestivals",
+    "psychedelictrance",
+    "fullonnation",
+    "darkpsy",
+    "shankra",
+    "boomfestival",
+    "ozora",
+    "voovexperience",
+    "universecestival",
+    "atmanfestival",
+    "hadra",
+    "visionquestfest",
+    "glastonburypsy",
+    "tribalmix",
+    "suntriprecords",
+    "nanobeat",
+    "digestivepsy",
+    "psychedeliccircus",
+    "lostinpsy",
+    "ayahuascaexperience",
+    "sensoriumfestival",
+    "gatheringfest",
     # Descubiertos por dorks DDG/Tor (Sep 2026): canales reales activos
-    "goatrancechannel", "goatranceforever", "tranceportalSOL",
+    "goatrancechannel",
+    "goatranceforever",
+    "tranceportalSOL",
 ]
 
 _KEYWORDS = re.compile(
@@ -68,26 +89,28 @@ def extraer_eventos_canal(canal: str, timeout: int = 25):
         return []
     out = []
     for m in _POST_RE.finditer(html):
-        link, dt = m.group(1), m.group(2)
+        link = m.group(1)
         bloque_fin = html.find("</div>", m.end())
-        bloque = html[m.start():bloque_fin if bloque_fin != -1 else m.end() + 4000]
+        bloque = html[m.start() : bloque_fin if bloque_fin != -1 else m.end() + 4000]
         tm = _TEXTO_RE.search(bloque)
         texto = _limpiar(tm.group(1)) if tm else ""
         if not _es_evento(texto):
             continue
         anio = _ANIO.search(texto)
         fecha = anio.group(0) if anio else ""
-        out.append({
-            "nombre": f"{canal}: {texto[:80]}",
-            "fecha": fecha,
-            "lugar": "",
-            "pais": "",
-            "organizador": "",
-            "email": "",
-            "link": link,
-            "fuente": "telegram",
-            "texto": texto[:500],
-        })
+        out.append(
+            {
+                "nombre": f"{canal}: {texto[:80]}",
+                "fecha": fecha,
+                "lugar": "",
+                "pais": "",
+                "organizador": "",
+                "email": "",
+                "link": link,
+                "fuente": "telegram",
+                "texto": texto[:500],
+            }
+        )
     return out
 
 
@@ -104,8 +127,17 @@ def escanear(canales=None, timeout: int = 25):
             print(f"  [telegram] {c}: {len(evs)} candidato(s)")
         todos.extend(evs)
     if todos:
-        campos = ["nombre", "fecha", "lugar", "pais", "organizador",
-                  "email", "link", "fuente", "texto"]
+        campos = [
+            "nombre",
+            "fecha",
+            "lugar",
+            "pais",
+            "organizador",
+            "email",
+            "link",
+            "fuente",
+            "texto",
+        ]
         with SALIDA.open("w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=campos)
             w.writeheader()

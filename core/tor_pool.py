@@ -5,6 +5,7 @@ Tor Pool — Gestión profesional de múltiples identidades Tor.
 
 IDENTIDADES_TOR = [(9050, 9051), (9052, 9053), (9054, 9055)].
 """
+
 from __future__ import annotations
 
 import json
@@ -17,7 +18,10 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    import requests
 
 _PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PROJECT_ROOT not in sys.path:
@@ -33,6 +37,7 @@ CHECK_TIMEOUT = 2
 STARTUP_WAIT = 8
 _tor_semaphore = None
 
+
 def _puerto_disponible(puerto: int) -> bool:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -43,8 +48,10 @@ def _puerto_disponible(puerto: int) -> bool:
     except (socket.error, OSError, ConnectionRefusedError):
         return False
 
+
 def _tor_esta_activo(puerto_socks: int) -> bool:
     return _puerto_disponible(puerto_socks)
+
 
 def _leer_estado() -> Dict[str, any]:
     try:
@@ -55,12 +62,14 @@ def _leer_estado() -> Dict[str, any]:
         pass
     return {"circuitos": {}, "ultima_rotacion": time.time()}
 
+
 def _guardar_estado(estado: Dict[str, any]) -> None:
     TOR_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     tmp = str(TOR_STATE_FILE) + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(estado, f, indent=2)
     os.replace(tmp, str(TOR_STATE_FILE))
+
 
 def _iniciar_tor(socks_port, control_port, data_dir_name):
     data_dir = TOR_DATA_DIR / data_dir_name
@@ -73,7 +82,12 @@ def _iniciar_tor(socks_port, control_port, data_dir_name):
     except OSError:
         return None
     try:
-        proc = subprocess.Popen([TOR_BIN, "-f", str(torrc_path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        proc = subprocess.Popen(
+            [TOR_BIN, "-f", str(torrc_path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
         for _ in range(20):
             if _tor_esta_activo(socks_port):
                 time.sleep(1)
@@ -88,12 +102,15 @@ def _iniciar_tor(socks_port, control_port, data_dir_name):
     except Exception:
         return None
 
+
 def verificar_tor(puerto_socks: int = 9050) -> bool:
     return _tor_esta_activo(puerto_socks)
+
 
 def rotar_tor(indice: int = 0) -> bool:
     try:
         from core.tor_utils import rotar_tor as _rotar_utils
+
         result = _rotar_utils()
         if result:
             return True
@@ -115,18 +132,31 @@ def rotar_tor(indice: int = 0) -> bool:
     if proc is not None:
         time.sleep(STARTUP_WAIT)
         if _tor_esta_activo(socks_port):
-            estado.setdefault("circuitos", {})[circuito_key] = {"idx": indice, "socks_port": socks_port, "control_port": control_port, "proceso_pid": proc.pid, "bloqueado_desdes": None}
+            estado.setdefault("circuitos", {})[circuito_key] = {
+                "idx": indice,
+                "socks_port": socks_port,
+                "control_port": control_port,
+                "proceso_pid": proc.pid,
+                "bloqueado_desdes": None,
+            }
             _guardar_estado(estado)
             return True
     marcar_circuito_bloqueado(indice)
     return False
 
+
 def marcar_circuito_bloqueado(indice: int) -> None:
     estado = _leer_estado()
     socks_port, control_port = IDENTIDADES_TOR[indice]
     circuito_key = f"circuito_{socks_port}"
-    estado.setdefault("circuitos", {})[circuito_key] = {"idx": indice, "socks_port": socks_port, "control_port": control_port, "bloqueado_desdes": time.time()}
+    estado.setdefault("circuitos", {})[circuito_key] = {
+        "idx": indice,
+        "socks_port": socks_port,
+        "control_port": control_port,
+        "bloqueado_desdes": time.time(),
+    }
     _guardar_estado(estado)
+
 
 def obtener_siguiente_identidad() -> int:
     """Devuelve el índice del circuito Tor menos usado/no bloqueado.
@@ -154,7 +184,8 @@ def obtener_siguiente_identidad() -> int:
     # Ninguno de los circuitos registrados responde: probar los tres puertos
     # y quedarse con los que sí escuchan.
     puertos_activos = [
-        i for i, (socks_port, _control_port) in enumerate(IDENTIDADES_TOR)
+        i
+        for i, (socks_port, _control_port) in enumerate(IDENTIDADES_TOR)
         if _tor_esta_activo(socks_port)
     ]
     if puertos_activos:
@@ -165,25 +196,37 @@ def obtener_siguiente_identidad() -> int:
     except Exception:
         pass
     puertos_activos = [
-        i for i, (socks_port, _control_port) in enumerate(IDENTIDADES_TOR)
+        i
+        for i, (socks_port, _control_port) in enumerate(IDENTIDADES_TOR)
         if _tor_esta_activo(socks_port)
     ]
     if puertos_activos:
         return random.choice(puertos_activos)
     return 0
 
+
 def obtener_sesion_tor(indice: Optional[int] = None) -> Optional["requests.Session"]:
     import requests
+
+    from core.http_client import _load_proxy_url as _lp
+
     # Proxy residencial de terceros (NUNCA la IP del usuario): si está
     # configurado, se usa y no requiere Tor.
-    from core.http_client import get_active_proxies as _gap, _load_proxy_url as _lp
+    from core.http_client import get_active_proxies as _gap
+
     if _lp():
         s = requests.Session()
         s.proxies.update(_gap())
-        s.headers.update({"User-Agent": random.choice([
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
-        ])})
+        s.headers.update(
+            {
+                "User-Agent": random.choice(
+                    [
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+                    ]
+                )
+            }
+        )
         return s
     if not _tor_semaphore:
         iniciar_pool()
@@ -199,13 +242,24 @@ def obtener_sesion_tor(indice: Optional[int] = None) -> Optional["requests.Sessi
     session = requests.Session()
     proxy_url = f"socks5h://127.0.0.1:{socks_port}"
     session.proxies.update({"http": proxy_url, "https": proxy_url})
-    session.headers.update({"User-Agent": random.choice(["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"])})
+    session.headers.update(
+        {
+            "User-Agent": random.choice(
+                [
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                ]
+            )
+        }
+    )
     circuito_key = f"circuito_{socks_port}"
     estado.setdefault("circuitos", {}).setdefault(circuito_key, {})
     estado["circuitos"][circuito_key].setdefault("ultimo_uso", time.time())
     estado["circuitos"][circuito_key]["bloqueado_desdes"] = None
     _guardar_estado(estado)
     return session
+
 
 def iniciar_pool() -> bool:
     global _tor_semaphore
@@ -216,7 +270,7 @@ def iniciar_pool() -> bool:
         circuito_key = f"circuito_{socks_port}"
         if circuito_key in estado:
             bloqueado_desde = estado["circuitos"].get(circuito_key, {}).get("bloqueado_desdes")
-            if bloqueado_desde and time.time() - bloqueado_desdes < CIRCUIT_COOLDOWN:
+            if bloqueado_desde and time.time() - bloqueado_desde < CIRCUIT_COOLDOWN:
                 continue
         if _tor_esta_activo(socks_port):
             proxies_levantados.append(idx)
@@ -228,11 +282,18 @@ def iniciar_pool() -> bool:
                 time.sleep(2)
                 if _tor_esta_activo(socks_port):
                     proxies_levantados.append(idx)
-                    estado.setdefault("circuitos", {})[circuito_key] = {"idx": idx, "socks_port": socks_port, "control_port": control_port, "proceso_pid": proc.pid, "bloqueado_desdes": None}
+                    estado.setdefault("circuitos", {})[circuito_key] = {
+                        "idx": idx,
+                        "socks_port": socks_port,
+                        "control_port": control_port,
+                        "proceso_pid": proc.pid,
+                        "bloqueado_desdes": None,
+                    }
                     _guardar_estado(estado)
     if proxies_levantados:
         _guardar_estado(estado)
     return len(proxies_levantados) > 0
+
 
 if __name__ == "__main__":
     print(f"Tor verificado (9050): {verificar_tor()}")

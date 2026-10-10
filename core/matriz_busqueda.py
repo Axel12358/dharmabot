@@ -21,12 +21,11 @@ Uso:
   python -m core.matriz_busqueda --presupuesto 1000 --dry-run  # solo genera, no ejecuta
   python -m core.matriz_busqueda --presupuesto 5000         # extensivo, ~4h
 """
+
 import argparse
 import csv
-import itertools
 import json
 import random
-import re
 import sys
 import time
 from pathlib import Path
@@ -46,9 +45,21 @@ TIPOS = ["festival", "gathering", "open air", "party", "rave", "ceremony", "ritu
 
 try:
     from scrapers.event_extractor import SINONIMOS
+
     SINONIMOS_LIST = list(SINONIMOS.keys())
 except Exception:
-    SINONIMOS_LIST = ["psytrance", "goa", "forest", "darkpsy", "progressive", "hitech", "fullon", "psychill", "psybient", "suomisaundi"]
+    SINONIMOS_LIST = [
+        "psytrance",
+        "goa",
+        "forest",
+        "darkpsy",
+        "progressive",
+        "hitech",
+        "fullon",
+        "psychill",
+        "psybient",
+        "suomisaundi",
+    ]
 
 
 def _cargar_ciudades() -> List[Dict]:
@@ -71,16 +82,27 @@ def _dorks_vistos() -> set:
     return vistos
 
 
-def generar_combinaciones(presupuesto: int = 200, semilla: int = 42, evitar_vistos: bool = True) -> List[Dict]:
+def generar_combinaciones(
+    presupuesto: int = 200, semilla: int = 42, evitar_vistos: bool = True
+) -> List[Dict]:
     ciudades = _cargar_ciudades()
     if not ciudades:
         print("❌ config/ciudades_120.json no encontrado")
         return []
 
-    # Pesos de ciudades (normalizado)
-    total_peso = sum(c.get("peso", 20) for c in ciudades)
     # Sinónimos con peso: los top 5 (psytrance, progressive, goa, darkpsy, forest) 60% del presupuesto
-    top_sinonimos = ["psytrance", "psy trance", "goa", "goa trance", "progressive", "prog", "darkpsy", "dark psy", "forest", "forest psy"]
+    top_sinonimos = [
+        "psytrance",
+        "psy trance",
+        "goa",
+        "goa trance",
+        "progressive",
+        "prog",
+        "darkpsy",
+        "dark psy",
+        "forest",
+        "forest psy",
+    ]
     raros = [s for s in SINONIMOS_LIST if s not in top_sinonimos]
 
     vistos = _dorks_vistos() if evitar_vistos else set()
@@ -109,21 +131,24 @@ def generar_combinaciones(presupuesto: int = 200, semilla: int = 42, evitar_vist
         if dork in vistos:
             continue
         vistos.add(dork)
-        combinaciones.append({
-            "dork": dork,
-            "sinonimo": sinonimo,
-            "ciudad": ciudad["ciudad"],
-            "pais": ciudad["pais"],
-            "anio": anio,
-            "tipo": tipo,
-            "tier": ciudad["tier"],
-        })
+        combinaciones.append(
+            {
+                "dork": dork,
+                "sinonimo": sinonimo,
+                "ciudad": ciudad["ciudad"],
+                "pais": ciudad["pais"],
+                "anio": anio,
+                "tipo": tipo,
+                "tier": ciudad["tier"],
+            }
+        )
 
     pend = {"combinaciones": combinaciones, "total": len(combinaciones), "presupuesto": presupuesto}
     PENDIENTES_FILE.write_text(json.dumps(pend, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"📋 Generadas {len(combinaciones)}/{presupuesto} combinaciones → {PENDIENTES_FILE}")
     # Stats por tier
     from collections import Counter
+
     print(f"   Por tier: {dict(Counter(c['tier'] for c in combinaciones))}")
     print(f"   Por año: {dict(Counter(c['anio'] for c in combinaciones))}")
     return combinaciones
@@ -137,8 +162,8 @@ def ejecutar_combinaciones(combinaciones: List[Dict], dry_run: bool = False) -> 
         return 0
 
     try:
-        from core.serp_tor import buscar_serp
         from core.deduplicador import Deduplicador
+        from core.serp_tor import buscar_serp
         from core.tor_pool import rotar_tor
     except Exception as e:
         print(f"❌ Import SERP/Tor falló: {e}")
@@ -168,7 +193,7 @@ def ejecutar_combinaciones(combinaciones: List[Dict], dry_run: bool = False) -> 
             time.sleep(sleep_min)
         print(f"[{i}/{len(combinaciones)}] {combo['dork'][:70]}...", end=" ", flush=True)
         try:
-           # Prioridad 1: SearxNG local (Docker, multi-motor, respeta site:fb)
+            # Prioridad 1: SearxNG local (Docker, multi-motor, respeta site:fb)
             resultados = buscar_serp(combo["dork"], directo=True)
             hay_fb = any("facebook.com/events" in (r.get("url") or "") for r in resultados)
             if not hay_fb:
@@ -185,20 +210,22 @@ def ejecutar_combinaciones(combinaciones: List[Dict], dry_run: bool = False) -> 
             titulo = r.get("title", "") or r.get("titulo", "")
             if "facebook.com/events" not in url.lower():
                 continue
-            eventos.append({
-                "nombre": titulo[:120] or combo["sinonimo"] + " " + combo["tipo"],
-                "fecha": f"{combo['anio']}-01-01",
-                "lugar": combo["ciudad"],
-                "pais": combo["pais"],
-                "continente": "",
-                "subcontinente": "",
-                "fuente": "Facebook (matriz)",
-                "organizador": "N/A",
-                "email": "N/A",
-                "link": url,
-                "subgenero": combo["sinonimo"],
-                "tipo_lugar": combo["tipo"],
-            })
+            eventos.append(
+                {
+                    "nombre": titulo[:120] or combo["sinonimo"] + " " + combo["tipo"],
+                    "fecha": f"{combo['anio']}-01-01",
+                    "lugar": combo["ciudad"],
+                    "pais": combo["pais"],
+                    "continente": "",
+                    "subcontinente": "",
+                    "fuente": "Facebook (matriz)",
+                    "organizador": "N/A",
+                    "email": "N/A",
+                    "link": url,
+                    "subgenero": combo["sinonimo"],
+                    "tipo_lugar": combo["tipo"],
+                }
+            )
 
         nuevos = dedup.filtrar_nuevos(eventos)
         if nuevos:
@@ -218,7 +245,9 @@ def ejecutar_combinaciones(combinaciones: List[Dict], dry_run: bool = False) -> 
             except Exception as e:
                 # Si el lock del CSV agota el timeout (otro proceso lo tiene),
                 # no morir: se reintenta en el próximo checkpoint.
-                print(f"   ⚠️ checkpoint falló ({type(e).__name__}: {e}); reintento en {CHECKPOINT_CADA} dorks")
+                print(
+                    f"   ⚠️ checkpoint falló ({type(e).__name__}: {e}); reintento en {CHECKPOINT_CADA} dorks"
+                )
                 time.sleep(5)
 
         time.sleep(1.2)
@@ -255,7 +284,6 @@ def _consolidar_lote(nuevos_total: list) -> int:
     except Exception:
         from csv_lock import csv_locked_rows
     with csv_locked_rows(CSV_FILE, timeout=180) as (rows, _fn):
-        cols = list(rows[0].keys()) if rows else list(nuevos_total[0].keys())
         seen = {r.get("link") for r in rows if r.get("link")}
         agregados = 0
         for ev in nuevos_total:
@@ -269,7 +297,9 @@ def _consolidar_lote(nuevos_total: list) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Matriz de búsqueda amplia")
-    parser.add_argument("--presupuesto", type=int, default=200, help="N queries a generar (50-10000)")
+    parser.add_argument(
+        "--presupuesto", type=int, default=200, help="N queries a generar (50-10000)"
+    )
     parser.add_argument("--dry-run", action="store_true", help="Solo generar, no ejecutar SERP")
     parser.add_argument("--ejecutar", action="store_true", help="Ejecutar SERP tras generar")
     parser.add_argument("--semilla", type=int, default=42)
@@ -281,4 +311,4 @@ if __name__ == "__main__":
     elif args.dry_run:
         ejecutar_combinaciones(combos, dry_run=True)
     else:
-        print(f"Tip: añade --ejecutar para lanzar SERP o --dry-run para solo ver")
+        print("Tip: añade --ejecutar para lanzar SERP o --dry-run para solo ver")

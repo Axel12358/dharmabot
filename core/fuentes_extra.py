@@ -7,10 +7,9 @@ es robusto. Cada hallazgo se fusiona al CSV principal de forma aditiva (por
 link), dejando los campos de geocodificación/enriquecimiento para las fases
 5-A/5-B posteriores.
 """
+
 from __future__ import annotations
 
-import csv
-import re
 import sys
 import threading
 from pathlib import Path
@@ -19,9 +18,21 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 CSV = PROJECT_ROOT / "eventos_encontrados.csv"
-COLS = ["nombre", "fecha", "lugar", "pais", "continente", "subcontinente",
-        "fuente", "organizador", "email", "link", "subgenero", "tipo_lugar",
-        "contactos"]
+COLS = [
+    "nombre",
+    "fecha",
+    "lugar",
+    "pais",
+    "continente",
+    "subcontinente",
+    "fuente",
+    "organizador",
+    "email",
+    "link",
+    "subgenero",
+    "tipo_lugar",
+    "contactos",
+]
 
 # (fuente, dork). Sin comillas: DDG-lite solo devuelve así; los otros motores
 # refinan con site:. Años 2026-2028 para no quedarse en 2027.
@@ -51,6 +62,7 @@ FUENTES_DORKS = [
 
 def _buscar():
     from scrapers.facebook_dorks import _buscar_dork_multimotor_tor
+
     return _buscar_dork_multimotor_tor
 
 
@@ -62,6 +74,7 @@ def _buscar_segura(dork: str, timeout: int, tope: int = 40):
             box["r"] = _buscar()(dork, timeout)
         except Exception:
             box["r"] = []
+
     t = threading.Thread(target=_w, daemon=True)
     t.start()
     t.join(tope)
@@ -70,10 +83,21 @@ def _buscar_segura(dork: str, timeout: int, tope: int = 40):
 
 def _link_util(url: str) -> bool:
     u = (url or "").lower()
-    return any(s in u for s in ("facebook.com/events", "facebook.com/groups",
-                                "instagram.com", "t.me", "soundcloud.com",
-                                "psynews.org", "psytrance.com", "isratrance.com",
-                                "ektoplazm.com", "psymedia.com"))
+    return any(
+        s in u
+        for s in (
+            "facebook.com/events",
+            "facebook.com/groups",
+            "instagram.com",
+            "t.me",
+            "soundcloud.com",
+            "psynews.org",
+            "psytrance.com",
+            "isratrance.com",
+            "ektoplazm.com",
+            "psymedia.com",
+        )
+    )
 
 
 def _merge(rows_new: list[dict]) -> int:
@@ -83,13 +107,8 @@ def _merge(rows_new: list[dict]) -> int:
         from core.csv_lock import csv_locked_rows
     except Exception:
         from csv_lock import csv_locked_rows
-    seen = {f.upper() for f in ["nombre", "fecha", "lugar", "pais", "continente",
-                                "subcontinente", "fuente", "organizador", "email",
-                                "link", "subgenero", "tipo_lugar", "contactos"]}
     added = 0
     with csv_locked_rows(CSV, timeout=120) as (exist, _fn):
-        cols = list(exist[0].keys()) if exist else list(seen)
-        fieldnames = [c for c in cols if c.upper() in seen]
         vistos = {r.get("link") for r in exist}
         for r in rows_new:
             if r.get("link") and r["link"] not in vistos:
@@ -109,17 +128,27 @@ def recolectar_fuentes(max_por_fuente: int = 3) -> int:
     for fuente, dork in FUENTES_DORKS:
         nuevos: list[dict] = []
         res = _buscar_segura(dork, 15)
-        for hit in res[:max_por_fuente * 3]:
+        for hit in res[: max_por_fuente * 3]:
             url = hit.get("url", "")
             if not _link_util(url):
                 continue
-            nuevos.append({
-                "nombre": (hit.get("titulo", "") or "")[:120],
-                "fecha": "", "lugar": "", "pais": "", "continente": "",
-                "subcontinente": "", "fuente": f"fuentes_extra:{fuente}",
-                "organizador": "", "email": "", "link": url,
-                "subgenero": "", "tipo_lugar": "", "contactos": "",
-            })
+            nuevos.append(
+                {
+                    "nombre": (hit.get("titulo", "") or "")[:120],
+                    "fecha": "",
+                    "lugar": "",
+                    "pais": "",
+                    "continente": "",
+                    "subcontinente": "",
+                    "fuente": f"fuentes_extra:{fuente}",
+                    "organizador": "",
+                    "email": "",
+                    "link": url,
+                    "subgenero": "",
+                    "tipo_lugar": "",
+                    "contactos": "",
+                }
+            )
         total += _merge(nuevos)
     return total
 

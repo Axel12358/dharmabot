@@ -20,7 +20,8 @@ import csv
 import json
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutTimeout
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -31,6 +32,7 @@ from core.deduplicador import Deduplicador
 try:
     from core.plugin_loader import descubrir_scrapers as _plugin_descubrir
     from core.plugin_loader import inyectar_deduplicador as _plugin_inyectar_dedup
+
     _PLUGIN_LOADER_DISPONIBLE = True
 except ImportError:
     _PLUGIN_LOADER_DISPONIBLE = False
@@ -52,13 +54,14 @@ _dedup_actual: Optional[Deduplicador] = None
 def _importar(nombre_modulo: str, atributo: str) -> Callable:
     """Importación diferida y tolerante a fallos."""
     import importlib
+
     mod = importlib.import_module(nombre_modulo)
     return getattr(mod, atributo)
 
 
 def _construir_SCRAPERS() -> Dict[str, Dict[str, Any]]:
     """Construye el diccionario de scrapers activos con su timeout.
-    
+
     Si plugin_loader está disponible, lo usa (auto-descubrimiento).
     Si no, usa el dict hardcodeado como fallback.
     """
@@ -74,8 +77,7 @@ def _construir_SCRAPERS() -> Dict[str, Dict[str, Any]]:
                     "funcion": cfg["funcion"],
                     "timeout": cfg.get("timeout", TIMEOUT_DEFECTO),
                 }
-            print(f"🔌 Plugin loader: {len(resultado)} scrapers activos "
-                  f"(de {len(todos)} totales)")
+            print(f"🔌 Plugin loader: {len(resultado)} scrapers activos (de {len(todos)} totales)")
             return resultado
         except Exception as e:
             print(f"⚠️ Plugin loader falló ({e}), usando dict hardcodeado")
@@ -136,11 +138,15 @@ def _construir_SCRAPERS_HARDCODED() -> Dict[str, Dict[str, Any]]:
             "timeout": 60,
         },
         "edmdancedirectory": {
-            "funcion": lambda: _importar("scrapers.edmdancedirectory", "scrape_edmdancedirectory")(),
+            "funcion": lambda: _importar(
+                "scrapers.edmdancedirectory", "scrape_edmdancedirectory"
+            )(),
             "timeout": 60,
         },
         "psytrancefestivals_tv": {
-            "funcion": lambda: _importar("scrapers.psytrancefestivals_tv", "scrape_psytrancefestivals_tv")(),
+            "funcion": lambda: _importar(
+                "scrapers.psytrancefestivals_tv", "scrape_psytrancefestivals_tv"
+            )(),
             "timeout": 60,
         },
         "psymedia": {
@@ -192,8 +198,20 @@ def _leer_csv(filename: str) -> List[Dict]:
 
 
 def _escribir_csv(filename: str, eventos: List[Dict]) -> None:
-    keys = ["nombre", "fecha", "lugar", "pais", "continente", "subcontinente",
-            "fuente", "organizador", "email", "link", "subgenero", "tipo_lugar"]
+    keys = [
+        "nombre",
+        "fecha",
+        "lugar",
+        "pais",
+        "continente",
+        "subcontinente",
+        "fuente",
+        "organizador",
+        "email",
+        "link",
+        "subgenero",
+        "tipo_lugar",
+    ]
     tmp = filename + ".tmp"
     with open(tmp, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=keys, extrasaction="ignore")
@@ -227,8 +245,7 @@ def _guardar_metricas(entry: Dict[str, Any]) -> None:
         pass
 
 
-def orquestar_scrapers(activos: Optional[List[str]] = None,
-                       dry_run: bool = False) -> List[Dict]:
+def orquestar_scrapers(activos: Optional[List[str]] = None, dry_run: bool = False) -> List[Dict]:
     """devuelve los eventos NUEVOS añadidos al CSV (aditivo, no duplica).
 
     - ejecuta los scrapers activos (por defecto todos) en paralelo con timeout.
@@ -236,6 +253,7 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
     - registra metricas_orquestador.json.
     """
     from core.http_client import activar_tor_en_requests
+
     activar_tor_en_requests()
     scraper_dict = dict(SCRAPERS)
     if activos:
@@ -311,11 +329,10 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
     # problema simplemente no añade nada.
     try:
         from scrapers.telegram import scrape_telegram_events
+
         eventos_telegram = scrape_telegram_events()
         if eventos_telegram:
-            eventos_telegram = [
-                _normalizar_evento(e) for e in eventos_telegram
-            ]
+            eventos_telegram = [_normalizar_evento(e) for e in eventos_telegram]
             todos_nuevos.extend(eventos_telegram)
             print(f"  ✅ Telegram: {len(eventos_telegram)} eventos añadidos")
         else:
@@ -329,12 +346,15 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
     # NO devuelve eventos; guarda grupos/páginas/correos en JSON files
     try:
         from scrapers.facebook_dorks import scrape_facebook_dorks
+
         fb_result = scrape_facebook_dorks()
         total_hallazgos = fb_result.get("total_hallazgos", 0)
-        print(f"  ✅ Facebook Dorks: {total_hallazgos} hallazgos "
-              f"({fb_result.get('grupos', 0)} grupos, "
-              f"{fb_result.get('paginas', 0)} páginas, "
-              f"{fb_result.get('correos', 0)} correos)")
+        print(
+            f"  ✅ Facebook Dorks: {total_hallazgos} hallazgos "
+            f"({fb_result.get('grupos', 0)} grupos, "
+            f"{fb_result.get('paginas', 0)} páginas, "
+            f"{fb_result.get('correos', 0)} correos)"
+        )
     except ImportError:
         pass
     except Exception as e:
@@ -343,6 +363,7 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
     # ---- Instagram Dorks (Posts + Profiles) — opcional y aditiva ----
     try:
         from scrapers.instagram_dorks import scrape_instagram_dorks
+
         eventos_ig_dorks = scrape_instagram_dorks(limite=30)
         if eventos_ig_dorks:
             eventos_ig_dorks = [_normalizar_evento(e) for e in eventos_ig_dorks]
@@ -358,6 +379,7 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
     # ---- MCP Organizador / Dorks Unificado (motor central) — opcional y aditiva ----
     try:
         from core.mcp_organizador import ejecutar_mcp_dorks
+
         eventos_mcp = ejecutar_mcp_dorks(limite=50)
         if eventos_mcp:
             eventos_mcp = [_normalizar_evento(e) for e in eventos_mcp]
@@ -376,8 +398,10 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
     # Nunca rompe el flujo: si no está disponible, se sigue igual que antes.
     try:
         from pathlib import Path as _P
+
         if _P(__file__).resolve().parent.joinpath("agente_coordinador.py").exists():
             from core.agente_coordinador import ejecutar_agentes
+
             _nuevos_coord = ejecutar_agentes(dry_run=dry_run)
             print(f"  ✅ Agente Coordinador: {_nuevos_coord} eventos nuevos añadidos")
     except ImportError:
@@ -394,11 +418,14 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
     # Sin esto, el snapshot leído al inicio del ciclo SOBRESCRIBE el
     # enriquecimiento concurrente (emails/organizadores) de otros procesos.
     from core.csv_lock import csv_locked_rows
+
     with csv_locked_rows(OUTPUT_TODOS) as (frescas, _fn):
-        vistos = {(r.get('link', '') or f"{r.get('nombre','')}|{r.get('fecha','')}") for r in frescas}
+        vistos = {
+            (r.get("link", "") or f"{r.get('nombre', '')}|{r.get('fecha', '')}") for r in frescas
+        }
         add = []
         for e in nuevos:
-            k = (e.get('link', '') or f"{e.get('nombre','')}|{e.get('fecha','')}")
+            k = e.get("link", "") or f"{e.get('nombre', '')}|{e.get('fecha', '')}"
             if k and k not in vistos:
                 vistos.add(k)
                 add.append(e)
@@ -407,7 +434,9 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
             consolidados = list(frescas)
         else:
             consolidados = list(frescas) + add
-    print(f"📈 Total consolidado: {len(consolidados) - len(add)} + {len(add)} = {len(consolidados)}")
+    print(
+        f"📈 Total consolidado: {len(consolidados) - len(add)} + {len(add)} = {len(consolidados)}"
+    )
 
     if not dry_run:
         # Registrar nuevos como vistos antes de escribir
@@ -424,12 +453,15 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
     if not dry_run:
         try:
             from core.algebra_lineal import supervisar_y_mejorar
+
             _res_alg = supervisar_y_mejorar(OUTPUT_TODOS, aplicar_cambios=True)
             _rs = _res_alg.get("resumen", {})
-            print("🧮 Supervisión algebra lineal: "
-                  f"{_rs.get('duplicados_eliminados', 0)} duplicados, "
-                  f"{_rs.get('subgeneros_rellenados', 0)} subgéneros, "
-                  f"{_rs.get('tipos_lugar_rellenados', 0)} tipos de lugar")
+            print(
+                "🧮 Supervisión algebra lineal: "
+                f"{_rs.get('duplicados_eliminados', 0)} duplicados, "
+                f"{_rs.get('subgeneros_rellenados', 0)} subgéneros, "
+                f"{_rs.get('tipos_lugar_rellenados', 0)} tipos de lugar"
+            )
         except ImportError:
             pass  # Módulo no disponible, se sigue sin él
         except Exception as e:
@@ -457,13 +489,15 @@ def orquestar_scrapers(activos: Optional[List[str]] = None,
     for f, c in sorted(fuentes.items(), key=lambda x: -x[1]):
         print(f"   {f}: {c}")
 
-    print(f"\n✅ Completado. Nuevos añadidos: {len(nuevos)} | "
-          f"Total consolidado: {len(consolidados)}")
+    print(
+        f"\n✅ Completado. Nuevos añadidos: {len(nuevos)} | Total consolidado: {len(consolidados)}"
+    )
     return nuevos
 
 
 if __name__ == "__main__":
     import sys
+
     dry = "--dry-run" in sys.argv
     nuevos = orquestar_scrapers(dry_run=dry)
     print(f"\n(CLI) Eventos nuevos añadidos: {len(nuevos)}")
