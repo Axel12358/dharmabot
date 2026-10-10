@@ -43,6 +43,6 @@ jobs:
       - name: Compile all sources (smoke)
         run: uv run python -m compileall -q . -x '/(\.git|\.venv|venv)/'
       - name: Run real tests (no network)
-        run: uv run pytest -q --no-header -W ignore tests/test_fecha_parse.py
+        run: uv run pytest -q --no-header -W ignore tests/
       - name: Import core package
         run: uv run python -c "import core; print('core OK')"

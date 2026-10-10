@@ -12,7 +12,7 @@ lint:                  ## Lint + formato (ruff)
 	$(PY) -m ruff format core/ tests/ || true
 
 test:                  ## Tests puros sin red
-	$(PY) -m pytest -q --no-header -W ignore tests/test_fecha_parse.py
+	$(PY) -m pytest -q --no-header -W ignore tests/
 
 run:                   ## Loop principal de enriquecimiento
 	./run_loop_completar.sh

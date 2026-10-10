@@ -1,4 +1,5 @@
 """Tests puros (sin red) para core.fecha_parse."""
+
 import sys
 from pathlib import Path
 
@@ -46,3 +47,19 @@ def test_guion_doodle_extra():
 
 def test_guion_sin_anio_sin_fallback():
     assert parse_fecha("22 de julio") is None
+
+
+def test_pt_mes_texto():
+    assert parse_fecha("14 de março de 2026") == "2026-03-14"
+    assert parse_fecha("14 de setembro de 2026") == "2026-09-14"
+
+
+def test_fr_mes_texto():
+    assert parse_fecha("14 septembre 2026") == "2026-09-14"
+
+
+def test_fallback_limites_de_rango_2025_2028():
+    assert parse_fecha("15 de junio", fallback_year="2025") == "2025-06-15"
+    assert parse_fecha("15 de junio", fallback_year="2028") == "2028-06-15"
+    assert parse_fecha("15 de junio", fallback_year="2024") is None
+    assert parse_fecha("15 de junio", fallback_year="2029") is None
